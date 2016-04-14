@@ -11,7 +11,7 @@ def guessLangCodeFromFileName(filepath):
             return field.lower()
     return "UNK"
 
-def printGuessLangCodeFromFileNameList(filepaths):
+def printLangCodeList(filepaths):
     print(str.join(' ', map(guessLangCodeFromFileName, filepaths)))
 
 def cmdGuessLangCode(args):
@@ -19,7 +19,7 @@ def cmdGuessLangCode(args):
     parser.add_argument('filepaths', metavar="filepath", nargs="+", type=str, help='list of file names to guess the language codes')
     #parser.add_argument('--from-filename', '-n', action='store_true', help='guess from the file name (default)')
     parsed = parser.parse_args(args)
-    printGuessLangCodeFromFileNameList(parsed.filepaths)
+    printLangCodeList(parsed.filepaths)
 
 if __name__ == '__main__':
     cmdGuessLangCode(sys.argv[1:])
