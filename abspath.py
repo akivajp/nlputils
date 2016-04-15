@@ -9,7 +9,7 @@ def printAbsPathList(filepaths):
 
 def cmdAbsPath(args):
     parser = argparse.ArgumentParser(description='Get absolute paths of given files or directories')
-    parser.add_argument('filepaths', metavar="filepath", nargs="+", type=str, help='list of file names to get the absolute paths')
+    parser.add_argument('filepaths', metavar="filepath", nargs="+", type=str, help='path of file to get the absolute paths')
     parsed = parser.parse_args(args)
     printAbsPathList(parsed.filepaths)
 

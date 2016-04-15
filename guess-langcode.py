@@ -16,7 +16,7 @@ def printLangCodeList(filepaths):
 
 def cmdGuessLangCode(args):
     parser = argparse.ArgumentParser(description='Guess the language codes from given files')
-    parser.add_argument('filepaths', metavar="filepath", nargs="+", type=str, help='list of file names to guess the language codes')
+    parser.add_argument('filepaths', metavar="filepath", nargs="+", type=str, help='path of file to guess the language code')
     #parser.add_argument('--from-filename', '-n', action='store_true', help='guess from the file name (default)')
     parsed = parser.parse_args(args)
     printLangCodeList(parsed.filepaths)
