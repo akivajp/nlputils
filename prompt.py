@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import argparse
 import os
@@ -25,17 +26,17 @@ def getAnswer(default):
 
 def askContinue(default=None):
     strYN = defaultString(default)
-    print("Do you want to continue? " + strYN)
+    sys.stderr.write("Do you want to continue? %s: " % strYN)
     ans = getAnswer(default)
     while ans == None:
-        print("Do you want to continue? " + strYN)
+        sys.stderr.write("Do you want to continue? %s: " % strYN)
         ans = getAnswer(default)
     if ans == False:
         sys.exit(1)
 
 def askExistContinue(filepath, default=None):
     if os.path.exists(filepath):
-        sys.stdout.write('"%s" is found. ' % filepath)
+        sys.stderr.write('"%s" is found. ' % filepath)
         askContinue(default)
 
 def cmdPrompt(args):
