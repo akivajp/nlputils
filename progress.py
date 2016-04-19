@@ -15,6 +15,9 @@ class ProgressCounter(object):
     def add(self, count=1):
         self.count += count
 
+    def flush(self, force=False):
+        self.view(flush=True, force=force)
+
     def reset(self, refresh=None, name=None):
         now = time.time()
         self.firstTime = now
@@ -26,7 +29,7 @@ class ProgressCounter(object):
         if name != None:
             self.name = name
 
-    def view(self, safe=True, flush=False):
+    def view(self, force=False, flush=False):
         now = time.time()
         deltaTime  = now - self.lastTime
         deltaCount = self.count - self.lastCount
@@ -35,7 +38,7 @@ class ProgressCounter(object):
             if deltaTime < self.refresh:
                 return
         fobj = None
-        if safe:
+        if not force:
             if not sys.stdout.isatty():
                 if sys.stderr.isatty():
                     fobj = sys.stderr
@@ -51,7 +54,7 @@ class ProgressCounter(object):
             fobj.write("\r")
             fobj.write("%s%s %s [%s/s] [%s]" % (name, about(self.count), elapsed, rate, timestamp))
             fobj.write("  \b\b")
-        if flush:
+        if fobj and flush:
             fobj.write("\n")
         self.lastTime  = now
         self.lastCount = self.count
@@ -95,7 +98,7 @@ def pipeView(filepaths, mode='bytes', name=None):
             counter.add()
             counter.view()
             sys.stdout.write(buf)
-    counter.view(flush=True)
+    counter.flush()
 
 def cmdPipeView(args):
     parser = argparse.ArgumentParser(description='Show the progress of pipe I/O')
