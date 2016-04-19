@@ -29,15 +29,19 @@ def log(msg, color=None):
 
 def warn(msg):
     strPrint = "[Warning %s] %s" % (timestamp(), msg)
-    code = colors['yellow']
-    sys.stderr.write("%s%s\033[m\n" % (code,strPrint))
-    if quit:
-        sys.exit(1)
+    if sys.stderr.isatty():
+        code = colors['yellow']
+        sys.stderr.write("%s%s\033[m\n" % (code,strPrint))
+    else:
+        sys.stderr.write("%s\n" % strPrint)
 
 def alert(msg, quit=True):
     strPrint = "[Error %s] %s" % (timestamp(), msg)
-    code = colors['red']
-    sys.stderr.write("%s%s\033[m\n" % (code,strPrint))
+    if sys.stderr.isatty():
+        code = colors['red']
+        sys.stderr.write("%s%s\033[m\n" % (code,strPrint))
+    else:
+        sys.stderr.write("%s\n" % strPrint)
     if quit:
         sys.exit(1)
 
