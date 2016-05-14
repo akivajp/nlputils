@@ -54,8 +54,8 @@ def cleanParallel(**args):
     srcBaseNames = map(os.path.basename, srcFilePaths)
     commonPrefix = reduce(getLongestCommonPrefix, srcBaseNames)
     commonSuffix = reduce(getLongestCommonSuffix, srcBaseNames)
-    print(commonPrefix)
-    print(commonSuffix)
+    #print(commonPrefix)
+    #print(commonSuffix)
     outpaths = []
     for path in srcFilePaths:
         if outTag[0:1] != '.':
