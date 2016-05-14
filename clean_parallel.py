@@ -8,6 +8,7 @@ import unicodedata
 
 import progress
 from common import compat
+from common import log
 
 def getLongestCommonPrefix(s1, s2):
     index = 0
@@ -56,20 +57,20 @@ def cleanParallel(**args):
     commonSuffix = reduce(getLongestCommonSuffix, srcBaseNames)
     #print(commonPrefix)
     #print(commonSuffix)
-    outpaths = []
+    outPaths = []
     for path in srcFilePaths:
         if outTag[0:1] != '.':
             outTag = '.' + outTag
         if commonSuffix:
-            outpath = path + outTag
+            outPath = path + outTag
         else:
             diff = getDiff(path, commonPrefix, commonSuffix)
             #print(diff)
-            outpath = commonPrefix + outTag + diff
-        outpaths.append(outpath)
-    #print(outpaths)
+            outPath = commonPrefix + outTag + diff
+        outPaths.append(outPath)
+    log.log("Writing cleaned corpora into: %s" % str.join(' ',outPaths))
     infiles  = [open(path,'r') for path in srcFilePaths]
-    outfiles = [open(path,'w') for path in outpaths]
+    outfiles = [open(path,'w') for path in outPaths]
     counter = progress.ProgressCounter(name='Processed')
     for lines in zip(*infiles):
         lines = map(normalize, lines)
