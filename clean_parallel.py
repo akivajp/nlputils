@@ -89,9 +89,9 @@ def cmdCleanParallel(args):
     parser = argparse.ArgumentParser(description='Clean parallel corpus by length and normalize Unicode chars')
     parser.add_argument('srcFilePaths', metavar="filepath", nargs="+", type=str, help='path of file to clean')
     parser.add_argument('outTag', metavar="output_tag", type=str, help='tag added in name of file to save')
-    parser.add_argument('--min', default=DEFAULT_MIN_LENGTH, type=int, help='minimum #words per line')
-    parser.add_argument('--max', default=DEFAULT_MAX_LENGTH, type=int, help='maximum #words per line')
-    parser.add_argument('--ratio', default=DEFAULT_RATIO, type=float, help='upper bound of maximal ratio of #words between each 2 lines')
+    parser.add_argument('--min', default=DEFAULT_MIN_LENGTH, type=int, help='minimum #words per line (default: %(default)s)')
+    parser.add_argument('--max', default=DEFAULT_MAX_LENGTH, type=int, help='maximum #words per line (default: %(default)s)')
+    parser.add_argument('--ratio', default=DEFAULT_RATIO, type=float, help='upper bound of maximal ratio of #words between each 2 lines (default: %(default)s)')
     parsed = parser.parse_args(args)
     cleanParallel(**vars(parsed))
 
