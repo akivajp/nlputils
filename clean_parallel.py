@@ -21,12 +21,9 @@ REPLACE_MAP = {
     u']': u'-RSB-',
     u'|': u'-BAR-',
     u'&': u'-AMP-',
-    u'\u00a0': u' ', # CHACACTER TABULATION (\t)
-    u'\u00a0': u' ', # NO-BREAK SPACE (&nbsp;)
-    u'\u2002': u' ', # EM SPACE
-    u'\u2003': u' ', # EN SPACE
+    u'\u0009': u' ', # CHACACTER TABULATION (\t)
     u'\u200b': u' ', # ZERO WIDTH SPACE
-    u'\u3000': u' ', # IDEOGRAPHIC SPACE
+    u'\ufefe': u' ', # ZERO WIDTH NO-BREAK SPACE
 }
 
 def getLongestCommonPrefix(s1, s2):
@@ -54,10 +51,10 @@ def replaceChar(c):
 def normalize(line):
     line = compat.toUnicode( line.strip() )
     line = unicodedata.normalize('NFKD', line)
-    line = str.join('', map(replaceChar, line))
-    line = re.sub(r'\s+', ' ', line)
+    line = u''.join(map(replaceChar, line))
     line = unicodedata.normalize('NFC', line)
-    #line = compat.toStr( line )
+    line = compat.toStr(line)
+    line = re.sub(r'\s+', ' ', line)
     return line
 
 def checkLength(lines, minLength, maxLength):
@@ -105,7 +102,7 @@ def cleanParallel(**args):
         lines = map(normalize, lines)
         if checkLength(lines, minLength, maxLength):
             for i, line in enumerate(lines):
-                outfiles[i].write(compat.toStr(line))
+                outfiles[i].write(line)
                 outfiles[i].write("\n")
         counter.add()
         counter.view(force=True)
