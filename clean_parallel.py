@@ -10,6 +10,25 @@ import progress
 from common import compat
 from common import log
 
+REPLACE_MAP = {
+    u'<': u'-LT-',
+    u'>': u'-GT-',
+    u'(': u'-LRB-',
+    u')': u'-RRB-',
+    u'{': u'-LCB-',
+    u'}': u'-RCB-',
+    u'[': u'-LSB-',
+    u']': u'-RSB-',
+    u'|': u'-BAR-',
+    u'&': u'-AMP-',
+    u'\u00a0': u' ', # CHACACTER TABULATION (\t)
+    u'\u00a0': u' ', # NO-BREAK SPACE (&nbsp;)
+    u'\u2002': u' ', # EM SPACE
+    u'\u2003': u' ', # EN SPACE
+    u'\u200b': u' ', # ZERO WIDTH SPACE
+    u'\u3000': u' ', # IDEOGRAPHIC SPACE
+}
+
 def getLongestCommonPrefix(s1, s2):
     index = 0
     f1 = s1.split('.')
@@ -25,10 +44,20 @@ def getLongestCommonPrefix(s1, s2):
 def getLongestCommonSuffix(s1, s2):
     return getLongestCommonPrefix(s1[::-1],s2[::-1])[::-1]
 
+def replaceChar(c):
+    if c in REPLACE_MAP:
+        #log.log("Replacing '%s' -> '%s'" % (c, REPLACE_MAP[c]))
+        return REPLACE_MAP[c]
+    else:
+        return c
+
 def normalize(line):
-    line = line.strip()
-    line = unicodedata.normalize('NFKC', compat.toUnicode(line))
+    line = compat.toUnicode( line.strip() )
+    line = unicodedata.normalize('NFKD', line)
+    line = str.join('', map(replaceChar, line))
     line = re.sub(r'\s+', ' ', line)
+    line = unicodedata.normalize('NFC', line)
+    #line = compat.toStr( line )
     return line
 
 def checkLength(lines, minLength, maxLength):
