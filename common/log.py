@@ -36,7 +36,7 @@ def log(msg, color=None, quiet=False):
 
 def debug(msg, color=None, quiet=False):
     if not quiet:
-        s = inspect.stack()[2]
+        s = inspect.stack()[1]
         frame    = s[0]
         filename = s[1]
         line     = s[2]
