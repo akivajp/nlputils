@@ -5,25 +5,26 @@ import os
 import re
 import sys
 import unicodedata
+from functools import reduce
 
 import progress
 from common import compat
 from common import log
 
 REPLACE_MAP = {
-    u'<': u'-LT-',
-    u'>': u'-GT-',
-    u'(': u'-LRB-',
-    u')': u'-RRB-',
-    u'{': u'-LCB-',
-    u'}': u'-RCB-',
-    u'[': u'-LSB-',
-    u']': u'-RSB-',
-    u'|': u'-BAR-',
-    u'&': u'-AMP-',
-    u'\u0009': u' ', # CHACACTER TABULATION (\t)
-    u'\u200b': u' ', # ZERO WIDTH SPACE
-    u'\ufefe': u' ', # ZERO WIDTH NO-BREAK SPACE
+    compat.toUnicode('<'): compat.toUnicode('-LT-'),
+    compat.toUnicode('>'): compat.toUnicode('-GT-'),
+    compat.toUnicode('('): compat.toUnicode('-LRB-'),
+    compat.toUnicode(')'): compat.toUnicode('-RRB-'),
+    compat.toUnicode('{'): compat.toUnicode('-LCB-'),
+    compat.toUnicode('}'): compat.toUnicode('-RCB-'),
+    compat.toUnicode('['): compat.toUnicode('-LSB-'),
+    compat.toUnicode(']'): compat.toUnicode('-RSB-'),
+    compat.toUnicode('|'): compat.toUnicode('-BAR-'),
+    compat.toUnicode('&'): compat.toUnicode('-AMP-'),
+    compat.toUnicode('\t'): compat.toUnicode(' '),
+    unicodedata.lookup('ZERO WIDTH SPACE'): compat.toUnicode(' '),
+    unicodedata.lookup('ZERO WIDTH NO-BREAK SPACE'): compat.toUnicode(' '),
 }
 
 def getLongestCommonPrefix(s1, s2):
@@ -51,7 +52,7 @@ def replaceChar(c):
 def normalize(line):
     line = compat.toUnicode( line.strip() )
     line = unicodedata.normalize('NFKD', line)
-    line = u''.join(map(replaceChar, line))
+    line = compat.toUnicode('').join(map(replaceChar, line))
     line = unicodedata.normalize('NFC', line)
     line = compat.toStr(line)
     line = re.sub(r'\s+', ' ', line)
@@ -78,7 +79,7 @@ def cleanParallel(**args):
     maxLength = args.get('max')
 
     #print(args)
-    srcBaseNames = map(os.path.basename, srcFilePaths)
+    srcBaseNames = list( map(os.path.basename, srcFilePaths) )
     commonPrefix = reduce(getLongestCommonPrefix, srcBaseNames)
     commonSuffix = reduce(getLongestCommonSuffix, srcBaseNames)
     #print(commonPrefix)
@@ -99,7 +100,7 @@ def cleanParallel(**args):
     outfiles = [open(path,'w') for path in outPaths]
     counter = progress.ProgressCounter(name='Processed')
     for lines in zip(*infiles):
-        lines = map(normalize, lines)
+        lines = list( map(normalize, lines) )
         if checkLength(lines, minLength, maxLength):
             for i, line in enumerate(lines):
                 outfiles[i].write(line)
