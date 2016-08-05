@@ -3,7 +3,10 @@
 
 import datetime
 import inspect
+import os
 import sys
+
+# Log/Debug print functions
 
 from common import compat
 
@@ -19,6 +22,27 @@ colors = {
     'white': '\033[37m'
 }
 
+#debugLevel = None
+debugLevel = 1
+
+def enableDebug(level = 1):
+    debugLevel = level
+
+def disableDebug():
+    debugLevel = 0
+
+def getDebugLevel():
+    if 'DEBUG' in os.environ:
+        level = os.environ['DEBUG']
+        if level.lower() in ('', 'false'):
+            level = 0
+        elif level.lower() in ('true',):
+            level = 1
+        else:
+            level = int(level)
+        return level
+    return debugLevel
+
 def timestamp():
     return datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
@@ -27,15 +51,15 @@ def putColor(strPrint, color=None):
         code = colors[color]
         sys.stderr.write("%s%s\033[m\n" % (code,strPrint))
     else:
-        sys.stdout.write(strPrint+"\n")
+        sys.stderr.write(strPrint+"\n")
 
 def log(msg, color=None, quiet=False):
     if not quiet:
         strPrint = "[%s] %s" % (timestamp(), compat.toStr(msg))
         putColor(strPrint, color)
 
-def debug(msg, color=None, quiet=False):
-    if not quiet:
+def debug(msg, color='yellow', level = 1):
+    if getDebugLevel() >= level:
         s = inspect.stack()[1]
         frame    = s[0]
         filename = s[1]
