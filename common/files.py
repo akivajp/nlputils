@@ -1,22 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''auxiliary functions for file I/O'''
+'''Auxiliary functions for file I/O'''
 
+# Standard libraries
 import codecs
 import gzip
 import io
 import os
 import os.path
 import re
+import sys
 
-#from exp.common import debug
-#import exp.common.progress
+# Local libraries
+from common import log
 
 env = os.environ
 env['LC_ALL'] = 'C'
 
 _open = open
+
+if sys.version_info.major >= 3:
+    FileType = io.IOBase
+else:
+    FileType = file
 
 def castFile(anyFile):
     '''try to convert any argument to file like object
@@ -64,6 +71,8 @@ def getExt(filename):
     (name, ext) = os.path.splitext(filename)
     return ext
 
+def isFileType(obj):
+    return isinstance(obj, FileType)
 
 def isGzipped(filename):
     '''check whether the given file is compressed by gzip or not'''
@@ -76,7 +85,7 @@ def isGzipped(filename):
 
 
 def load(filename, progress = True, bs = 10 * 1024 * 1024):
-    '''load all the content of given file (expand for compressed)'''
+    '''load all the content of given file (expand if compressed)'''
     data = io.BytesIO()
     f_in = _open(filename, 'rb')
     if progress:
@@ -105,17 +114,14 @@ def load(filename, progress = True, bs = 10 * 1024 * 1024):
     else:
         return data
 
-
-def mkdir(dirname, **options):
+def safeMakeDirs(dirpath, **options):
     '''make directories recursively for given path, don't throw exception if directory exists but if file exists'''
-    if os.path.isdir(dirname):
-        return
-    else:
-        ops = {}
-        if options.has_key('mode'):
-            ops['mode'] = options['mode']
-        os.makedirs(dirname, **ops)
-
+    if not os.path.isdir(dirpath):
+        log.log('Making directory: "%s"' % dirpath)
+        try:
+            os.makedirs(dirpath, **options)
+        except:
+            log.alert('Cannot make directory: "%s"' % dirpath)
 
 def open(filename, mode = 'r'):
     '''open the plain/compressed file transparently'''

@@ -9,7 +9,7 @@ from Cython.Compiler.Options import directive_defaults
 import sys
 from distutils import sysconfig
 # Local libraries
-from common import log
+#from common import log
 
 get_distutils_extension = None
 
@@ -33,23 +33,14 @@ def install():
             return extension_mod,setup_args
         pyximport.pyximport.get_distutils_extension = get_distutils_extension
     if sys.platform == 'linux2':
-        #cflags = sysconfig.get_config_vars().get('CFLAGS', '')
-        #cflags = cflags.replace('-Wstrict-prototypes', '')
-        #sysconfig.get_config_vars()['CFLAGS'] = cflags
-        #print("CFLAGS: %s" % cflags)
+        # Omitting 'strict-prototypes' warning For Python 2.x
         opt = sysconfig.get_config_vars().get('OPT', '')
         opt = opt.replace('-Wstrict-prototypes', '')
-        #opt += ' -DCYTHON_TRACE=1'
         sysconfig.get_config_vars()['OPT'] = opt
-        #corecflags = sysconfig.get_config_vars().get('PY_CORE_CFLAGS', '')
-        #corecflags = corecflags.replace('-Wstrict-prototypes', '')
-        #sysconfig.get_config_vars()['PY_CORE_CFLAGS'] = corecflags
-        #shared = sysconfig.get_config_vars().get('BLDSHARED', '')
-        #shared = shared.replace('-Wstrict-prototypes', '')
-        #sysconfig.get_config_vars()['BLDSHARED'] = shared
-        #pycflags = sysconfig.get_config_vars().get('PY_CFLAGS', '')
-        #pycflags = pycflags.replace('-Wstrict-prototypes', '')
-        #sysconfig.get_config_vars()['PY_CFLAGS'] = pycflags
+        # Omitting 'strict-prototypes' warning For Python 3.x
+        cflags = sysconfig.get_config_vars().get('CFLAGS', '')
+        cflags = cflags.replace('-Wstrict-prototypes', '')
+        sysconfig.get_config_vars()['CFLAGS'] = cflags
     #directive_defaults['binding'] = True
     #directive_defaults['linetrace'] = True
     pyximport.install()

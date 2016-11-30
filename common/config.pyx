@@ -4,6 +4,11 @@
 
 '''Configuration utility class for function settings'''
 
+# Standard libraries
+import json
+
+# Local libraries
+from common import compat
 from common import log
 
 class ConfigData(object):
@@ -84,6 +89,7 @@ class ConfigData(object):
 
 class Config(object):
     '''Configuration maintenance class'''
+    #cdef object __data
     __slots__ = {'__data'}
 
     def __init__(self, _base = None, **args):
@@ -110,6 +116,15 @@ class Config(object):
         else:
             return default
 
+    def items(self):
+        for key in self:
+            yield key, self[key]
+
+    def loadJSON(self, strJSON):
+        #self.update(json.loads(compat.toStr(strJSON)))
+        uniDict = json.loads(strJSON)
+        self.update(compat.toStr(uniDict))
+
     def require(self, name, desc = None, typeOf = None):
         val = self.requireAny(name, desc)
         if typeOf:
@@ -135,8 +150,14 @@ class Config(object):
         if key not in self:
             self[key] = val
             return val
+        elif self[key] == None:
+            self[key] = val
+            return val
         else:
             return self[key]
+
+    def toJSON(self, **options):
+        return json.dumps(dict(self.items()), **options)
 
     def update(self, _conf = None, **args):
         if _conf:

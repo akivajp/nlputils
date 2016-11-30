@@ -12,6 +12,7 @@ import os
 import sys
 import time
 # Local libraries
+from common import files
 from common import log
 
 cdef class ProgressCounter(object):
@@ -19,14 +20,15 @@ cdef class ProgressCounter(object):
     cdef readonly str name
     cdef readonly double refresh
     cdef readonly double firstTime, lastTime
-    cdef readonly long count, lastCount
+    cdef readonly long count, lastCount, maxCount
 
-    def __cinit__(self, double refresh=1, str name="", bool force=False):
+    def __cinit__(self, double refresh=1, str name="", bool force=False, long maxCount=-1):
         #log.log("__CINIT__", color="cyan")
         self.refresh = refresh
         self.name = name
         self.reset()
         self.force = force
+        self.maxCount = maxCount
 
     def add(self, unsigned long count=1, bool view=False):
         self.count += count
@@ -103,7 +105,8 @@ cdef class ProgressReader(object):
         self.counter = ProgressCounter(name=name, refresh=refresh, force=force)
         if type(source) == str:
             self.source = open(source)
-        elif type(source) == file:
+        #elif type(source) == file:
+        elif isinstance(source, files.FileType):
             self.source = source
 
     def read(self, unsigned long size):
