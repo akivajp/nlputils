@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+'''Log/Debug print functions'''
+
 import datetime
 import inspect
 import os
 import sys
 
-# Log/Debug print functions
-
-from common import compat
+from nlputils.common import compat
 
 colors = {
     'clear': '\033[0m',

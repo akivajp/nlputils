@@ -6,6 +6,7 @@ import pyximport
 #from pyximport import install
 from Cython.Compiler.Options import directive_defaults
 # Standard libraries
+import os.path
 import sys
 from distutils import sysconfig
 # Local libraries
@@ -26,8 +27,12 @@ def install():
             extension_mod, setup_args = old_get_distutils_extension(modname, pyxfilename, language_level)
             #log.log("extension_mod: %s" % extension_mod, color="cyan")
             #log.log("setup_args: %s" % setup_args, color="cyan")
+            #log.log("extension_mod.language: %s" % extension_mod.language, color="cyan")
+            #log.log("extension_mod.extra_compile_args: %s" % extension_mod.extra_compile_args, color="cyan")
+            #log.log("extension_mod.include_dirs: %s" % extension_mod.include_dirs, color="cyan")
             extension_mod.language='c++'
             extension_mod.extra_compile_args.append('-std=c++11')
+            extension_mod.include_dirs.append(os.path.dirname(pyxfilename))
             #extension_mod.extra_compile_args.append('-DCYTHON_TRACE=1')
             #extension_mod.define_macros.append( ('CYTHON_TRACE', '1') )
             return extension_mod,setup_args

@@ -22,8 +22,14 @@ _open = open
 
 if sys.version_info.major >= 3:
     FileType = io.IOBase
+    bin_stdin  = sys.stdin.buffer
+    bin_stdout = sys.stdout.buffer
+    bin_stderr = sys.stderr.buffer
 else:
     FileType = file
+    bin_stdin  = sys.stdin
+    bin_stdout = sys.stdout
+    bin_stderr = sys.stderr
 
 def castFile(anyFile):
     '''try to convert any argument to file like object
@@ -45,7 +51,6 @@ def autoCat(filenames, target):
             f_out.write(line)
         f_in.close()
     f_out.close()
-
 
 def getContentSize(path):
     '''get the file content size (expanded size for compressed one)'''
@@ -129,25 +134,41 @@ def open(filename, mode = 'r'):
         fileObj = gzip.open(filename, mode)
     else:
         fileObj = _open(filename, mode)
-    if str is bytes:
-        '''ascii-8 based strings (for python 2.X)'''
-        return fileObj
-    else:
-        '''utf-8 based strings (for python 3.X)'''
-        if mode.find('r') >= 0:
-            return codecs.getreader('utf-8')(fileObj)
-        else:
-#            return codecs.getwriter('utf-8')(fileObj)
-            return fileObj
+    return fileObj
+#    if str is bytes:
+#        '''ascii-8 based strings (for python 2.X)'''
+#        return fileObj
+#    else:
+#        '''utf-8 based strings (for python 3.X)'''
+#        if mode.find('r') >= 0:
+#            return codecs.getreader('utf-8')(fileObj)
+#        else:
+##            return codecs.getwriter('utf-8')(fileObj)
+#            return fileObj
 
+def rawfile(f):
+    if isinstance(f, gzip.GzipFile):
+        return f.myfileobj
+    elif isinstance(f, FileType):
+        return f
+    else:
+        log.debug(f)
+        assert False
+
+def rawsize(f):
+    raw = rawfile(f)
+    pos = raw.tell()
+    raw.seek(-1, 2)
+    size = raw.tell()
+    raw.seek(pos, 0)
+    return size
+
+def rawremain(f):
+    return rawsize(f) - rawtell(f)
 
 def rawtell(fileobj):
     '''get the current position of the opend file, return raw (not expanded) position for compressed'''
-    if type(fileobj) == gzip.GzipFile:
-        return fileobj.myfileobj.tell()
-    else:
-        return fileobj.tell()
-
+    return rawfile(fileobj).tell()
 
 def test(filename):
     '''test the file existence
