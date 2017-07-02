@@ -3,8 +3,6 @@
 
 '''Pipe-view script for I/O progress'''
 
-## Cython set-up
-#from common import pyximportcpp ; pyximportcpp.install()
 # Common Initialization
 import nlputils.init
 # Standard libraries

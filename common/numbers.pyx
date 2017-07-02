@@ -5,10 +5,15 @@
 
 # Standard libraries
 import math
+import sys
 
-cpdef toNumber(anyNum, float margin = 0):
+import nlputils.init
+from nlputils.common import logging
+
+cpdef object toNumber(anyNum, float margin = 0):
     cdef float floatNum
-    cdef int intNum
+    #cdef int intNum
+    cdef long intNum
     floatNum = float(anyNum)
     intNum   = int(round(floatNum))
     if abs(floatNum - intNum) <= margin:
@@ -16,14 +21,14 @@ cpdef toNumber(anyNum, float margin = 0):
     else:
         return floatNum
 
-cpdef __py2__intToBytes(n, int length, str byteorder='big'):
+cpdef bytes __py2__intToBytes(n, int length, str byteorder='big'):
     assert n >= 0
     strHex = '%x' % n
     if len(strHex) >= length*2:
         raise OverflowError('int too big to convert')
     strDecoded = strHex.zfill(length*2).decode('hex')
     return strDecoded if byteorder == 'big' else strDecoded[::-1]
-cpdef __py3__intToBytes(n, int length, str byteorder='big'):
+cpdef bytes __py3__intToBytes(n, int length, str byteorder='big'):
     return int.to_bytes(n, length, byteorder)
 
 cpdef __py2__intFromBytes(bytes b, str byteorder='big'):
@@ -34,10 +39,14 @@ cpdef __py2__intFromBytes(bytes b, str byteorder='big'):
 cpdef __py3__intFromBytes(bytes b, str byteorder='big'):
     return int.from_bytes(b, byteorder)
 
-if hasattr(int, 'to_bytes'):
-    intToBytes = __py3__intToBytes
-    intFromBytes = __py3__intFromBytes
-else:
-    intToBytes = __py2__intToBytes
+if sys.version_info.major == 2:
+    # Python2
     intFromBytes = __py2__intFromBytes
+    intToBytes   = __py2__intToBytes
+elif sys.version_info.major == 3:
+    # Python3
+    intFromBytes = __py3__intFromBytes
+    intToBytes   = __py3__intToBytes
+else:
+    raise SystemError("Unsupported python version: %s" % sys.version)
 

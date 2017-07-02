@@ -13,7 +13,7 @@ import re
 import sys
 
 # Local libraries
-from common import log
+from common import logging
 
 env = os.environ
 env['LC_ALL'] = 'C'
@@ -21,24 +21,15 @@ env['LC_ALL'] = 'C'
 _open = open
 
 if sys.version_info.major >= 3:
-    FileType = io.IOBase
     bin_stdin  = sys.stdin.buffer
     bin_stdout = sys.stdout.buffer
     bin_stderr = sys.stderr.buffer
+    FileType = io.IOBase
 else:
-    FileType = file
     bin_stdin  = sys.stdin
     bin_stdout = sys.stdout
     bin_stderr = sys.stderr
-
-def castFile(anyFile):
-    '''try to convert any argument to file like object
-    * if given file like object, then return itself
-    * otherwise (e.g. given file path string), try to open it and return file object'''
-    if hasattr(anyFile, 'read'):
-        return anyFile
-    else:
-        return open(anyFile)
+    FileType = file
 
 def autoCat(filenames, target):
     '''concatenate and copy files into target file (expanding for compressed ones)'''
@@ -51,6 +42,15 @@ def autoCat(filenames, target):
             f_out.write(line)
         f_in.close()
     f_out.close()
+
+def castFile(anyFile):
+    '''try to convert any argument to file like object
+    * if given file like object, then return itself
+    * otherwise (e.g. given file path string), try to open it and return file object'''
+    if hasattr(anyFile, 'read'):
+        return anyFile
+    else:
+        return open(anyFile)
 
 def getContentSize(path):
     '''get the file content size (expanded size for compressed one)'''
@@ -76,7 +76,8 @@ def getExt(filename):
     (name, ext) = os.path.splitext(filename)
     return ext
 
-def isFileType(obj):
+def isIOType(obj):
+    #return isinstance(obj, (io.IOBase,file))
     return isinstance(obj, FileType)
 
 def isGzipped(filename):
@@ -122,16 +123,17 @@ def load(filename, progress = True, bs = 10 * 1024 * 1024):
 def safeMakeDirs(dirpath, **options):
     '''make directories recursively for given path, don't throw exception if directory exists but if file exists'''
     if not os.path.isdir(dirpath):
-        log.log('Making directory: "%s"' % dirpath)
+        logging.log('Making directory: "%s"' % dirpath)
         try:
             os.makedirs(dirpath, **options)
         except:
-            log.alert('Cannot make directory: "%s"' % dirpath)
+            logging.alert('Cannot make directory: "%s"' % dirpath)
 
 def open(filename, mode = 'r'):
     '''open the plain/compressed file transparently'''
     if getExt(filename) == '.gz' or isGzipped(filename):
         fileObj = gzip.open(filename, mode)
+        #fileObj = gzip.GzipFile(filename, mode)
     else:
         fileObj = _open(filename, mode)
     return fileObj
@@ -147,12 +149,22 @@ def open(filename, mode = 'r'):
 #            return fileObj
 
 def rawfile(f):
-    if isinstance(f, gzip.GzipFile):
+    if hasattr(f, 'myfileobj'):
+        # for archive files such as gzip
         return f.myfileobj
-    elif isinstance(f, FileType):
+#    if isinstance(f, gzip.GzipFile):
+#        return f.myfileobj
+    elif hasattr(f, 'buffer'):
+        # for buffered files such as utf-8 mode
+        #return f.buffer
+        # might be duplicated buffer
+        return rawfile(f.buffer)
+    elif isIOType(f):
         return f
     else:
-        log.debug(f)
+        logging.debug(f)
+        #logging.debug(type(f))
+        #logging.debug(dir(f))
         assert False
 
 def rawsize(f):
@@ -170,11 +182,9 @@ def rawtell(fileobj):
     '''get the current position of the opend file, return raw (not expanded) position for compressed'''
     return rawfile(fileobj).tell()
 
-def test(filename):
-    '''test the file existence
-
-    if the file doesn't exist, open function throws exception'''
-    f_in = _open(filename)
-    f_in.close()
-    return True
+def testFile(path):
+    '''test file existence'''
+    if os.path.isfile(path):
+        return True
+    logging.alert("File does not exist: '%s'" % path)
 

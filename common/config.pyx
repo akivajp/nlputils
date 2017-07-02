@@ -9,7 +9,7 @@ import json
 
 # Local libraries
 from common import compat
-from common import log
+from common import logging
 
 class ConfigData(object):
     '''Configuration data holder'''
@@ -95,7 +95,8 @@ class Config(object):
     def __init__(self, _base = None, **args):
         self.__data = ConfigData(_base)
         if args:
-            self.__data.__dict__.update(args)
+            #self.__data.__dict__.update(args)
+            self.update(args)
 
     def cast(self, name, typeOf):
         val = self.requireAny(name)
@@ -120,10 +121,11 @@ class Config(object):
         for key in self:
             yield key, self[key]
 
-    def loadJSON(self, strJSON):
+    def loadJSON(self, strJSON, override=True):
         #self.update(json.loads(compat.toStr(strJSON)))
         uniDict = json.loads(strJSON)
-        self.update(compat.toStr(uniDict))
+        #self.update(compat.toStr(uniDict))
+        self.update(uniDict, override)
 
     def require(self, name, desc = None, typeOf = None):
         val = self.requireAny(name, desc)
@@ -143,7 +145,7 @@ class Config(object):
         val = self.requireAny(name)
         if type(val) != typeOf:
             msg = 'Configuration "%s" should be type of %s, but given %s'
-            log.alert(msg % (name, typeOf, type(val)))
+            logging.alert(msg % (name, typeOf, type(val)))
         return val
 
     def setdefault(self, key, val):
@@ -159,12 +161,18 @@ class Config(object):
     def toJSON(self, **options):
         return json.dumps(dict(self.items()), **options)
 
-    def update(self, _conf = None, **args):
+    def update(self, _conf = None, _override=True, **args):
         if _conf:
-            for key in _conf:
-                self[key] = _conf[key]
+            if _override:
+                for key, val in _conf.items():
+                    if val != None:
+                        self[key] = val
+            else:
+                for key in _conf:
+                    if key not in self:
+                        self[key] = _conf[key]
         if args:
-            self.update(args)
+            self.update(args, _override)
 
     def __getitem__(self, key):
         return self.data.__getitem__(key)

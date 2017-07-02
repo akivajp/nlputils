@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Common Initialization
+import nlputils.init
+# Standard libraries
 import argparse
 import os
 import re
 import sys
 import unicodedata
 from functools import reduce
-
-import progress
-from common import compat
-from common import log
+# Local libraries
+from nlputils.common import progress
+from nlputils.common import compat
+from nlputils.common import logging
 
 REPLACE_MAP = {
     compat.toUnicode('<'): compat.toUnicode('-LT-'),
@@ -45,7 +48,7 @@ def getLongestCommonSuffix(s1, s2):
 
 def replaceChar(c):
     if c in REPLACE_MAP:
-        #log.log("Replacing '%s' -> '%s'" % (c, REPLACE_MAP[c]))
+        #logging.log("Replacing '%s' -> '%s'" % (c, REPLACE_MAP[c]))
         return REPLACE_MAP[c]
     else:
         return c
@@ -96,19 +99,26 @@ def cleanParallel(**args):
             #print(diff)
             outPath = commonPrefix + outTag + diff
         outPaths.append(outPath)
-    log.log("Writing cleaned corpora into: %s" % str.join(' ',outPaths))
-    infiles  = [open(path,'r') for path in srcFilePaths]
+    logging.log("Writing cleaned corpora into: %s" % str.join(' ',outPaths))
+    if sys.version_info.major >= 3:
+        infiles  = [open(path,'rb') for path in srcFilePaths]
+    else:
+        infiles  = [open(path,'r') for path in srcFilePaths]
     outfiles = [open(path,'w') for path in outPaths]
-    counter = progress.ProgressCounter(name='Processed')
-    for lines in zip(*infiles):
-        lines = list( map(normalize, lines) )
-        if checkLength(lines, minLength, maxLength):
-            for i, line in enumerate(lines):
-                outfiles[i].write(line)
-                outfiles[i].write("\n")
+    counter = progress.SpeedCounter(name='Processed')
+    for i, lines in enumerate(zip(*infiles)):
         counter.add()
-        counter.view(force=True)
-    counter.flush(force=True)
+        counter.view()
+        try:
+            lines = list( map(normalize, lines) )
+            if checkLength(lines, minLength, maxLength):
+                for i, line in enumerate(lines):
+                    outfiles[i].write(line)
+                    outfiles[i].write("\n")
+        except Exception as e:
+            #sys.stdout.write("\n")
+            logging.warn("%s (Line %s)" % (e, i))
+    counter.flush()
 
 def cmdCleanParallel(args):
     DEFAULT_MIN_LENGTH = 1

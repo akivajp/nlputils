@@ -27,9 +27,11 @@ def getAnswer(default):
 def askContinue(default=None):
     strYN = defaultString(default)
     sys.stderr.write("Do you want to continue? %s: " % strYN)
+    sys.stderr.flush()
     ans = getAnswer(default)
     while ans == None:
         sys.stderr.write("Do you want to continue? %s: " % strYN)
+        sys.stderr.flush()
         ans = getAnswer(default)
     if ans == False:
         sys.exit(1)

@@ -4,13 +4,13 @@
 # Cython set-up
 import pyximport
 #from pyximport import install
-from Cython.Compiler.Options import directive_defaults
+#from Cython.Compiler.Options import directive_defaults
 # Standard libraries
 import os.path
 import sys
 from distutils import sysconfig
 # Local libraries
-#from common import log
+#from common import logging
 
 get_distutils_extension = None
 
@@ -20,16 +20,16 @@ def install():
     if not get_distutils_extension:
         old_get_distutils_extension = pyximport.pyximport.get_distutils_extension
         def get_distutils_extension(modname, pyxfilename, language_level=None):
-            #log.log("modname: %s" % modname, color="cyan")
-            #log.log("pyxfilename: %s" % pyxfilename, color="cyan")
-            #log.log("language_level: %s" % language_level, color="cyan")
+            #logging.log("modname: %s" % modname, color="cyan")
+            #logging.log("pyxfilename: %s" % pyxfilename, color="cyan")
+            #logging.log("language_level: %s" % language_level, color="cyan")
             global extension_mod, setup_args
             extension_mod, setup_args = old_get_distutils_extension(modname, pyxfilename, language_level)
-            #log.log("extension_mod: %s" % extension_mod, color="cyan")
-            #log.log("setup_args: %s" % setup_args, color="cyan")
-            #log.log("extension_mod.language: %s" % extension_mod.language, color="cyan")
-            #log.log("extension_mod.extra_compile_args: %s" % extension_mod.extra_compile_args, color="cyan")
-            #log.log("extension_mod.include_dirs: %s" % extension_mod.include_dirs, color="cyan")
+            #logging.log("extension_mod: %s" % extension_mod, color="cyan")
+            #logging.log("setup_args: %s" % setup_args, color="cyan")
+            #logging.log("extension_mod.language: %s" % extension_mod.language, color="cyan")
+            #logging.log("extension_mod.extra_compile_args: %s" % extension_mod.extra_compile_args, color="cyan")
+            #logging.log("extension_mod.include_dirs: %s" % extension_mod.include_dirs, color="cyan")
             extension_mod.language='c++'
             extension_mod.extra_compile_args.append('-std=c++11')
             extension_mod.include_dirs.append(os.path.dirname(pyxfilename))

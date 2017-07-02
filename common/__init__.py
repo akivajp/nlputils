@@ -5,7 +5,7 @@ __all__ = [
   'compat',
   'config',
   'files',
-  'log',
+  'logging',
   'numbers',
   'progress',
   'pyximportcpp',
