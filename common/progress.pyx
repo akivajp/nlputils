@@ -14,26 +14,30 @@ import sys
 import time
 # Local libraries
 from common import compat
+from common import environ
 from common import files
 from common import logging
 
 cdef long BUFFER_SIZE = 4096
+cdef str BACK_WHITE = '  \b\b'
 
 #cdef class ProgressCounter(object):
 cdef class SpeedCounter(object):
     cdef readonly bool force
-    cdef readonly str name
+    cdef readonly str header
     cdef readonly double refresh
-    cdef readonly double firstTime, lastTime
-    cdef readonly long count, pos, lastCount, maxCount
+    cdef readonly double strat_time, last_time
+    cdef readonly long count, pos, last_count, max_count
+    cdef readonly str color
 
-    def __cinit__(self, str name="", long maxCount=-1, double refresh=1, bool force=False):
+    def __cinit__(self, str header="", long max_count=-1, double refresh=1, bool force=False, str color='green'):
         #logging.log("__CINIT__", color="cyan")
         self.refresh = refresh
-        self.name = name
+        self.header = header 
         self.reset()
         self.force = force
-        self.maxCount = maxCount
+        self.max_count = max_count
+        self.color = color
 
     def add(self, unsigned long count=1, bool view=False):
         self.count += count
@@ -43,92 +47,92 @@ cdef class SpeedCounter(object):
     def flush(self):
         self.view(flush=True)
 
-    def reset(self, refresh=None, name=None, force=None):
+    def reset(self, refresh=None, header=None, force=None, color=None):
         cdef double now
         now = time.time()
-        self.firstTime = now
-        self.lastTime  = now
+        self.strat_time = now
+        self.last_time  = now
         self.count = 0
-        self.lastCount = 0
+        self.last_count = 0
         self.pos = 0
         if refresh != None:
             self.refresh = refresh
-        if name != None:
-            self.name = name
+        if header != None:
+            self.header = header
         if force != None:
             self.force = force
+        if color != None:
+            self.color = color
 
-    def setCount(self, unsigned long count, bool view=False):
+    def set_count(self, unsigned long count, bool view=False):
         self.count = count
         if view:
             self.view()
 
-    def setPosition(self, unsigned long position, bool view=False):
+    def set_position(self, unsigned long position, bool view=False):
         self.pos = position
         if view:
             self.view()
 
     def view(self, bool flush=False):
-        cdef double now, deltaTime, deltaCount
-        cdef str strElapsed, strRate, strRatio, strTimeStamp, showName
+        cdef double now, delta_time, delta_count
+        cdef str str_elapsed, str_rate, str_ratio
+        cdef str str_timestamp, str_header, str_about
+        cdef str str_print
+        cdef bool show_bytes
         now = time.time()
-        #logging.debug(now)
-        #logging.debug(self.lastTime)
-        deltaTime  = now - self.lastTime
-        #logging.debug(deltaTime)
+        delta_time  = now - self.last_time
         if not flush:
-            #logging.debug(deltaTime)
-            #logging.debug(self.refresh)
-            if deltaTime < self.refresh:
+            if delta_time < self.refresh:
                 return False
-        #logging.debug(deltaTime)
         fobj = None
         if not self.force:
             if sys.stderr.isatty():
                 fobj = sys.stderr
-            #if not sys.stdout.isatty():
-            #    if sys.stderr.isatty():
-            #        fobj = sys.stderr
         else:
             fobj = sys.stderr
-        #logging.debug(fobj)
         if fobj:
-            deltaCount = self.count - self.lastCount
-            showBytes = False
+            delta_count = self.count - self.last_count
+            show_bytes = False
             if self.count == self.pos:
                 # bytes mode
-                showBytes = True
-            strRate = about(deltaCount / deltaTime, showBytes)
-            if self.name:
-                showName = "%s: " % self.name
+                show_bytes = True
+            str_rate = about(delta_count / delta_time, show_bytes)
+            if self.header:
+                str_header = "%s: " % self.header
             else:
-                showName = ""
-            if self.maxCount > 0:
+                str_header = ""
+            if self.max_count > 0:
                 if self.pos > 0:
-                    strRatio = "(%.2f%%) " % (self.pos * 100.0 / self.maxCount)
+                    str_ratio = "(%.2f%%) " % (self.pos * 100.0 / self.max_count)
                 else:
-                    strRatio = "(%.2f%%) " % (self.count * 100.0 / self.maxCount)
+                    str_ratio = "(%.2f%%) " % (self.count * 100.0 / self.max_count)
             else:
-                strRatio = ""
+                str_ratio = ""
             try:
                 #strTimeStamp = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
-                strTimeStamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+                #str_timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+                str_timestamp = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
                 fobj.write("\r")
-                strElapsed = formatTime(now - self.firstTime)
+                str_elapsed = format_time(now - self.strat_time)
                 #logging.debug(elapsed)
-                fobj.write("%s%s %s%s [%s/s] [%s]" % (showName, about(self.count,showBytes), strRatio, strElapsed, strRate, strTimeStamp))
-                fobj.write("  \b\b")
+                #fobj.write("%s%s %s%s [%s/s] [%s]" % (showName, about(self.count,show_bytes), strRatio, strElapsed, strRate, strTimeStamp))
+                #fobj.write("[%s] %s%s %s%s [%s/s]" % (strTimeStamp, showName, about(self.count,show_bytes), strRatio, strElapsed, strRate))
+                #fobj.write("  \b\b")
+                str_about = about(self.count, show_bytes)
+                str_print = "[%s] %s%s %s%s [%s/s]%s" % (str_timestamp, str_header, str_about, str_ratio, str_elapsed, str_rate, BACK_WHITE)
+                logging.put_color(str_print, self.color, newline=False)
             except Exception as e:
                 print(e)
                 pass
         if fobj and flush:
             fobj.write("\n")
-        self.lastTime  = now
-        self.lastCount = self.count
+        self.last_time  = now
+        self.last_count = self.count
         return True
 
     def __del__(self):
-        if self.lastCount != self.count:
+        if self.last_count != self.count:
             self.flush()
 
 #cdef class ProgressReader(object):
@@ -137,20 +141,20 @@ cdef class FileReader(object):
     cdef SpeedCounter counter
     cdef object source
 
-    def __cinit__(self, source, str name="", double refresh=1, bool force=False):
+    def __cinit__(self, source, str header="", double refresh=1, bool force=False):
         if isinstance(source, str):
             #self.source = files.open(source, 'r')
             #self.source = files.open(source, 'rb')
-            if not name:
-                name = "reading file '%s'" % source
+            if not header:
+                header = "reading file '%s'" % source
             self.source = files.open(source, 'rt')
         elif isinstance(source, io.IOBase):
             self.source = source
         else:
             raise TypeError("FileReader() expected iterable str or file type, but given %s found" % type(source).__name__)
         size = files.rawsize(self.source)
-        #self.counter = ProgressCounter(name=name, refresh=refresh, force=force, maxCount=size)
-        self.counter = SpeedCounter(name=name, maxCount=size, refresh=refresh, force=force)
+        #self.counter = ProgressCounter(header=header, refresh=refresh, force=force, max_count=size)
+        self.counter = SpeedCounter(header=header, max_count=size, refresh=refresh, force=force)
 
     #def __del__(self):
     #    print("DEL")
@@ -172,7 +176,7 @@ cdef class FileReader(object):
         if self.source:
             line = self.source.readline()
             self.counter.add(1)
-            self.counter.setPosition(files.rawtell(self.source))
+            self.counter.set_position(files.rawtell(self.source))
             self.counter.view()
             return line
             #return compat.toStr( line )
@@ -187,7 +191,7 @@ cdef class FileReader(object):
                 #yield(line)
                 #yield compat.toStr(line)
                 self.counter.add(1)
-                self.counter.setPosition(files.rawtell(self.source))
+                self.counter.set_position(files.rawtell(self.source))
                 self.counter.view()
                 yield line
         self.close()
@@ -196,12 +200,12 @@ cdef class Iterator(object):
     cdef SpeedCounter counter
     cdef object source
 
-    def __cinit__(self, source, str name="", double refresh=1, bool force=False, long maxCount=-1):
+    def __cinit__(self, source, str header="", double refresh=1, bool force=False, long max_count=-1):
         if isinstance(source, Iterable):
             self.source = source
         else:
             raise TypeError("Iterator() expected iterable type, but %s found" % type(source).__name__)
-        self.counter = SpeedCounter(name=name, maxCount=maxCount, refresh=refresh, force=force)
+        self.counter = SpeedCounter(header=header, max_count=max_count, refresh=refresh, force=force)
 
     def __dealloc__(self):
         self.close()
@@ -220,17 +224,17 @@ cdef class Iterator(object):
                 yield obj
         self.close()
 
-cdef formatTime(seconds):
-    cdef unsigned char showSeconds, showMinutes
-    cdef unsigned long showHours
+cdef format_time(seconds):
+    cdef unsigned char show_seconds, show_minutes
+    cdef unsigned long show_hours
     seconds = int(seconds)
-    showSeconds = seconds % 60
-    showMinutes = (seconds / 60) % 60
-    showHours = seconds / (60*60)
-    return "%02d:%02d:%02d" % (showHours,showMinutes,showSeconds)
+    show_seconds = seconds % 60
+    show_minutes = (seconds / 60) % 60
+    show_hours = seconds / (60*60)
+    return "%02d:%02d:%02d" % (show_hours,show_minutes,show_seconds)
 
-def about(num, bool showBytes = False):
-    if showBytes:
+def about(num, bool show_bytes = False):
+    if show_bytes:
         if num >= 2 ** 30:
             show = num / float(2 ** 30)
             return "%.3fGiB" % show
@@ -255,13 +259,13 @@ def about(num, bool showBytes = False):
         else:
             return "%.3f" % num
 
-cpdef open(path, name=""):
-    return FileReader(path, name)
+cpdef open(path, header=""):
+    return FileReader(path, header)
 
-cpdef pipeView(filepaths, mode='bytes', name=None, refresh=1, outfunc=None):
+cpdef pipeView(filepaths, mode='bytes', header=None, refresh=1, outfunc=None):
     #cdef str strBuf
     cdef bytes buf
-    cdef long maxCount = -1
+    cdef long max_count = -1
     cdef long delta = 1
     cdef SpeedCounter counter
     if refresh < 0:
@@ -269,10 +273,10 @@ cpdef pipeView(filepaths, mode='bytes', name=None, refresh=1, outfunc=None):
     infiles = [files.open(fpath, 'rb') for fpath in filepaths]
     if infiles:
         #if mode == 'bytes':
-        maxCount = sum(map(files.rawsize, infiles))
+        max_count = sum(map(files.rawsize, infiles))
     else:
         infiles = [files.bin_stdin]
-    counter = SpeedCounter(name=name, refresh=refresh, maxCount=maxCount)
+    counter = SpeedCounter(header=header, refresh=refresh, max_count=max_count)
     for infile in infiles:
         while True:
             buf = infile.read(BUFFER_SIZE)
@@ -286,21 +290,27 @@ cpdef pipeView(filepaths, mode='bytes', name=None, refresh=1, outfunc=None):
             if not outfunc:
                 files.bin_stdout.write(buf)
             counter.add(delta)
-            counter.setPosition(counter.pos + len(buf))
+            counter.set_position(counter.pos + len(buf))
             counter.view()
     counter.flush()
 
-cpdef view(source, name = None, long maxCount = -1):
-    if isinstance(source, (FileReader,Iterator)):
+cpdef view(source, header = None, long max_count = -1, env = True):
+    if logging.get_quiet_mode():
+        # as-is (without progress view)
+        return source
+    elif isinstance(source, (FileReader,Iterator)):
         return source
     elif isinstance(source, (str,io.IOBase)):
-        if not name:
-            name = "reading file"
-        return FileReader(source, name)
+        if not header:
+            header = "reading file"
+        return FileReader(source, header)
     elif isinstance(source, Iterable):
-        if not name:
-            name = "iterating"
-        return Iterator(source, name, maxCount=maxCount)
+        if not header:
+            header = "iterating"
+        if max_count < 0:
+            if hasattr(source, '__len__'):
+                max_count = len(source)
+        return Iterator(source, header, max_count=max_count)
     else:
         raise TypeError("view() expected file or iterable type, but %s found" % type(source).__name__)
 

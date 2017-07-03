@@ -17,12 +17,12 @@ def cmdPipeView(args):
     parser.add_argument('filepaths', metavar="filepath", nargs="*", type=str, help='path of file to load')
     parser.add_argument('--lines', '-l', action='store_true', help='line count mode (default: byte count mode)')
     parser.add_argument('--refresh', '-r', type=float, default=1.0, help='refresh interval (default: %(default)s')
-    parser.add_argument('--name', '-N', type=str, help='prefix the output information')
+    parser.add_argument('--head', '-H', type=str, help='header of the progress information')
     parsed = parser.parse_args(args)
     mode = 'bytes'
     if parsed.lines:
         mode = 'lines'
-    pipeView(parsed.filepaths, mode=mode, name=parsed.name, refresh=parsed.refresh)
+    pipeView(parsed.filepaths, mode=mode, head=parsed.name, refresh=parsed.refresh)
 
 def main():
     cmdPipeView(sys.argv[1:])

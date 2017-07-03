@@ -1,5 +1,6 @@
 # distutils: language=c++
 # -*- coding: utf-8 -*-
+# cython: profile=True
 
 # Standard libraries
 import argparse
@@ -8,7 +9,11 @@ import sys
 from collections import defaultdict
 
 # Local libraries
+from nlputils.common import environ
+from nlputils.common import files
+from nlputils.common import progress
 from nlputils.common import logging
+from nlputils.common.config import Config
 
 ITERATION_LIMIT = 10
 
@@ -28,35 +33,44 @@ vocab = {
     },
 }
 
-def calc_entropy(sent_pairs, trans_probs):
+def calc_entropy(sent_pairs, trans_probs, conf):
     entropy = 0
-    for i, (src_sent, trg_sent) in enumerate(sent_pairs):
+    #for i, (src_sent, trg_sent) in enumerate(progress.view(sent_pairs)):
+    #for i, (src_sent, trg_sent) in enumerate(sent_pairs):
+    logging.log('calculating entropy')
+    for i, (src_sent, trg_sent) in enumerate(progress.view(sent_pairs, 'progress')):
         prob = 1.0
-        #prob = float(1) / ((len(src_sent)+1) ** len(trg_sent))
-        #for src in src_sent:
-        #    for trg in trg_sent:
         for trg in trg_sent:
-            sum_align = 0
+            sum_for_align = 0
             for src in src_sent:
-                sum_align += trans_probs[src,trg]
-            #prob = prob * sum_align / (len(src_sent)+1)
-            prob = prob * sum_align / len(src_sent)
-        #print("prob: %s" % prob)
+                sum_for_align += trans_probs[src,trg]
+            prob = prob * sum_for_align / len(src_sent)
         entropy -= math.log(prob)
     return entropy / len(sent_pairs)
 
-def train_ibm_model1(sent_pairs, iteration_limit = ITERATION_LIMIT):
-    logging.log("start training")
+def train_ibm_model1(conf, **others):
+    cdef long i
+    cdef list src_sent
+    cdef list trg_sent
+    cdef str src, trg
+
+    conf = Config(conf, **others)
+    check_config(conf)
+
+    sent_pairs = load_pairs(conf)
+    logging.log("start training IBM Model 1")
     trans_prob_src2trg = calc_uniform_dist(sent_pairs)
-    last_entropy = calc_entropy(sent_pairs, trans_prob_src2trg)
+    last_entropy = calc_entropy(sent_pairs, trans_prob_src2trg, conf)
     logging.log("initial entropy: %s" % last_entropy)
-    for epoch in range(iteration_limit):
+    for epoch in range(conf.data.iteration_limit):
         entropy = 0
-        logging.log("epoch: %s\n" % (epoch + 1))
+        logging.log("--")
+        logging.log("epoch: %s" % (epoch + 1))
         # initialize
         count_src2trg = defaultdict(lambda: 0.0)
         total_src = defaultdict(lambda: 0.0)
-        for i, (src_sent, trg_sent) in enumerate(sent_pairs):
+        logging.log("estimating co-occurences")
+        for i, (src_sent, trg_sent) in enumerate(progress.view(sent_pairs, 'processing')):
             #print("processing sent: %s" % i)
             # compute normalization
             #print("calc normalization factor")
@@ -76,12 +90,13 @@ def train_ibm_model1(sent_pairs, iteration_limit = ITERATION_LIMIT):
                     count_src2trg[src,trg] += trans_prob_src2trg[src,trg] / trg_factor[trg]
                     total_src[src] += trans_prob_src2trg[src,trg] / trg_factor[trg]
         # estimate probabilities
-        logging.log("estimate probs")
-        for src in src_id2word:
+        logging.log("estimating probs")
+        #for src in src_id2word:
+        for src in progress.view(src_id2word, 'processing'):
             for trg in trg_id2word:
                 if total_src[src]:
                     trans_prob_src2trg[src,trg] = count_src2trg[src,trg] / total_src[src]
-        entropy = calc_entropy(sent_pairs, trans_prob_src2trg)
+        entropy = calc_entropy(sent_pairs, trans_prob_src2trg, conf)
         logging.log("entropy: %s" % entropy)
         if entropy == last_entropy:
             break
@@ -90,16 +105,12 @@ def train_ibm_model1(sent_pairs, iteration_limit = ITERATION_LIMIT):
     return trans_prob_src2trg
 
 def calc_uniform_dist(sent_pairs):
+    cdef str src_word, trg_word
+
     trans_prob_src2trg = {}
-    #trg_vocab = set()
-    #for pair in sent_pairs:
-    #    for word in pair[1]:
-    #        trg_vocab.add(word)
-    #for pair in sent_pairs:
-    #    for src_word in pair[0]:
-    #        for trg_word in pair[1]:
-    #            trans_prob_src2trg[src_word,trg_word] = 1 / float(len(trg_vocab)+1)
-    for src_word in src_id2word:
+    # calculating uniform distribution
+    logging.log("calculating uniform distribution for word translation probability")
+    for src_word in progress.view(src_id2word, 'processing'):
         for trg_word in trg_id2word:
             trans_prob_src2trg[src_word,trg_word] = float(1) / len(trg_id2word)
     return trans_prob_src2trg
@@ -126,10 +137,14 @@ def init_vocab():
     get_src_word_id('-NULL-')
     get_trg_word_id('-NULL-')
 
-def load_files(src_path, trg_path):
-    logging.log("file loading")
-    src_file = open(src_path)
-    trg_file = open(trg_path)
+#def load_files(src_path, trg_path, quiet=False, progress=False):
+def load_pairs(conf):
+    src_path = conf.data.src_path
+    trg_path = conf.data.trg_path
+    if not conf.data.quiet:
+        logging.log("loading files: %s %s" % (src_path,trg_path))
+    src_file = progress.view(files.open(src_path), 'loading')
+    trg_file = files.open(trg_path)
     sent_pairs = []
     init_vocab()
     for src_line, trg_line in zip(src_file, trg_file):
@@ -145,26 +160,35 @@ def load_files(src_path, trg_path):
     return sent_pairs
 
 def write_trans_probs(out_path, trans_probs, threshold = 0.01):
-    with open(out_path, 'w') as fobj:
-        for (src, trg), prob in sorted(trans_probs.items()):
+    with files.open(out_path, 'wt') as fobj:
+        for (src, trg), prob in progress.view(sorted(trans_probs.items())):
             if prob > threshold:
                 fobj.write("%s\t%s\t%s\n" % (src, trg, prob))
 
+def check_config(conf):
+    if conf.data.verbose:
+        logging.debug(conf)
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('src_file', help='file containing source-side lines of parallel text', type=str)
-    parser.add_argument('trg_file', help='file containing target-side lines of parallel text', type=str)
-    parser.add_argument('save_align_file', help='output file to save alignment', type=str)
-    parser.add_argument('--iteration', '-I', help='maximum iteration number of EM algorithm (default: %(default)s)', type=int, default=ITERATION_LIMIT)
-    parser.add_argument('--verbose', '-v', help='verbose mode', action='store_true')
-    parser.add_argument('--progress', '-p', help='show progress', action='store_true')
+    parser.add_argument('src_path', metavar='src_path (in)', help='file containing source-side lines of parallel text', type=str)
+    parser.add_argument('trg_path', help='file containing target-side lines of parallel text', type=str)
+    parser.add_argument('save_align_path', help='output file to save alignment', type=str)
+    parser.add_argument('--iteration_limit', '-I', help='maximum iteration number of EM algorithm (default: %(default)s)', type=int, default=ITERATION_LIMIT)
     parser.add_argument('--threshold', '-t', help='threshold of translation probabilities to save', type=float, default=0.01)
+    parser.add_argument('--verbose', '-v', help='verbose mode (including debug info)', action='store_true')
+    parser.add_argument('--quiet', '-q', help='not showing staging log', action='store_true')
     args = parser.parse_args()
+    conf = Config(vars(args))
     if args.verbose:
         logging.debug(args)
-    sent_pairs = load_files(args.src_file, args.trg_file)
-    trans_probs = train_ibm_model1(sent_pairs, args.iteration)
-    write_trans_probs(args.save_align_file, trans_probs, args.threshold)
+    with environ.push() as env:
+        if conf.data.verbose:
+            env.set('DEBUG', '1')
+        if conf.data.quiet:
+            env.set('QUIET', '1')
+        trans_probs = train_ibm_model1(conf)
+        write_trans_probs(args.save_align_path, trans_probs, args.threshold)
 
 if __name__ == '__main__':
     main()

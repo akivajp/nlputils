@@ -8,8 +8,8 @@
 import json
 
 # Local libraries
-from common import compat
-from common import logging
+from nlputils.common import compat
+from nlputils.common import logging
 
 class ConfigData(object):
     '''Configuration data holder'''

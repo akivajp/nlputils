@@ -105,7 +105,7 @@ def cleanParallel(**args):
     else:
         infiles  = [open(path,'r') for path in srcFilePaths]
     outfiles = [open(path,'w') for path in outPaths]
-    counter = progress.SpeedCounter(name='Processed')
+    counter = progress.SpeedCounter(header='Processed')
     for i, lines in enumerate(zip(*infiles)):
         counter.add()
         counter.view()

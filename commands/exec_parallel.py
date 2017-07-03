@@ -272,7 +272,7 @@ def concatFiles(conf):
     outPath = conf.data.outPath
     conf.data.processed = 0
     #progCounter = progress.ProgressCounter(1, "concat", force=True, maxCount=lineCount)
-    progCounter = progress.SpeedCounter(name="concat", maxCount=lineCount)
+    progCounter = progress.SpeedCounter(header="concat", maxCount=lineCount)
     for fileNumber in range(1, numChunks+1):
         strFileNumber = int2str(fileNumber, digits, '0')
         inPath = "%s.%s.out" % (prefix, strFileNumber)

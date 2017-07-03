@@ -132,9 +132,11 @@ def safeMakeDirs(dirpath, **options):
 def open(filename, mode = 'r'):
     '''open the plain/compressed file transparently'''
     if getExt(filename) == '.gz' or isGzipped(filename):
+        #logging.debug("gzip open mode")
         fileObj = gzip.open(filename, mode)
         #fileObj = gzip.GzipFile(filename, mode)
     else:
+        #logging.debug("normal open mode")
         fileObj = _open(filename, mode)
     return fileObj
 #    if str is bytes:
