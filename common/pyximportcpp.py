@@ -14,6 +14,13 @@ from distutils import sysconfig
 
 get_distutils_extension = None
 
+have_numpy = False
+try:
+    import numpy
+    have_numpy = True
+except Exception as e:
+    pass
+
 #if True:
 def install():
     global get_distutils_extension
@@ -33,6 +40,12 @@ def install():
             extension_mod.language='c++'
             extension_mod.extra_compile_args.append('-std=c++11')
             extension_mod.include_dirs.append(os.path.dirname(pyxfilename))
+            if have_numpy:
+                extension_mod.include_dirs.append(numpy.get_include())
+                extension_mod.extra_compile_args.append('-w')
+                #extension_mod.extra_compile_args.append('-DNPY_NO_DEPRECATED_API=DNPY_1_7_API_VERSION')
+                #extension_mod.extra_compile_args.append('-DNPY_NO_DEPRECATED_API')
+                #extension_mod.extra_compile_args.append('-DNPY_1_7_API_VERSION')
             #extension_mod.extra_compile_args.append('-DCYTHON_TRACE=1')
             #extension_mod.define_macros.append( ('CYTHON_TRACE', '1') )
             return extension_mod,setup_args

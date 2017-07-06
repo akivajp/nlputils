@@ -11,9 +11,9 @@ import json
 from nlputils.common import compat
 from nlputils.common import logging
 
-class ConfigData(object):
+cdef class ConfigData:
     '''Configuration data holder'''
-    def __init__(self, _base=None, **args):
+    def __cinit__(self, _base=None, **args):
         if type(_base) == Config:
             self.__base = _base.data
         elif type(_base) == ConfigData:
@@ -64,7 +64,7 @@ class ConfigData(object):
     def __repr__(self):
         c = self.__class__
         name = c.__name__
-        strParams = getKeyValStr(vars(self), False)
+        strParams = get_key_val_str(vars(self), False)
         if strParams:
             return "%s(%r, %s)" % (name,self.__base,strParams)
         else:
@@ -85,31 +85,25 @@ class ConfigData(object):
         elif key.startswith('_'):
             raise KeyError('Key should not start with "_": %s' % key)
         else:
-            return self.__dict__.__setitem__(key, val)
+            self.__dict__.__setitem__(key, val)
 
-class Config(object):
+cdef class Config:
     '''Configuration maintenance class'''
-    #cdef object __data
-    __slots__ = {'__data'}
 
-    def __init__(self, _base = None, **args):
-        self.__data = ConfigData(_base)
+    def __cinit__(self, _base = None, **args):
+        #self.data = ConfigData(_base)
+        self.data = ConfigData(_base=_base)
         if args:
-            #self.__data.__dict__.update(args)
             self.update(args)
 
     def cast(self, name, typeOf):
-        val = self.requireAny(name)
+        val = self.require_any(name)
         if type(val) == typeOf:
             return val
         else:
             newVal = typeOf(val)
             self.data.__dict__[name] = newVal
             return newVal
-
-    @property
-    def data(self):
-        return self.__data
 
     def get(self, key, default = None):
         if key in self:
@@ -121,19 +115,19 @@ class Config(object):
         for key in self:
             yield key, self[key]
 
-    def loadJSON(self, strJSON, override=True):
+    def load_json(self, strJSON, override=True):
         #self.update(json.loads(compat.toStr(strJSON)))
         uniDict = json.loads(strJSON)
         #self.update(compat.toStr(uniDict))
         self.update(uniDict, override)
 
     def require(self, name, desc = None, typeOf = None):
-        val = self.requireAny(name, desc)
+        val = self.require_any(name, desc)
         if typeOf:
-            self.requireType(name, typeOf)
+            self.require_type(name, typeOf)
         return val
 
-    def requireAny(self, name, desc = None):
+    def require_any(self, name, desc = None):
         if name not in self.data:
             if desc:
                 raise KeyError('Configuration "%s" (%s) is not defined' % (name, desc))
@@ -141,8 +135,8 @@ class Config(object):
                 raise KeyError('Configuration "%s" is not defined' % (name))
         return self.data.__getitem__(name)
 
-    def requireType(self, name, typeOf):
-        val = self.requireAny(name)
+    def require_type(self, name, typeOf):
+        val = self.require_any(name)
         if type(val) != typeOf:
             msg = 'Configuration "%s" should be type of %s, but given %s'
             logging.alert(msg % (name, typeOf, type(val)))
@@ -158,7 +152,7 @@ class Config(object):
         else:
             return self[key]
 
-    def toJSON(self, **options):
+    def to_json(self, **options):
         return json.dumps(dict(self.items()), **options)
 
     def update(self, _conf = None, _override=True, **args):
@@ -186,13 +180,13 @@ class Config(object):
     def __repr__(self):
         c = self.__class__
         name = c.__name__
-        strParams = getKeyValStr(vars(self.data), False)
+        strParams = get_key_val_str(vars(self.data), False)
         return "%s(%r)" % (name,self.data)
 
     def __setitem__(self, key, val):
-        return self.data.__setitem__(key, val)
+        self.data.__setitem__(key, val)
 
-def getKeyValStr(d, verbose=True):
+cdef get_key_val_str(d, verbose):
     if verbose:
         items = ["%s=%r" % (t[0],t[1]) for t in d.items()]
     else:

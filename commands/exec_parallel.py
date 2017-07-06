@@ -143,7 +143,7 @@ def splitFile(conf):
         waitPhaseDone(conf, 'split')
         logging.debug(conf)
         logging.log("Updating the configuration with: %s" % configFile)
-        conf.loadJSON(open(configFile).read(), False)
+        conf.load_json(open(configFile).read(), False)
         logging.debug(conf)
         return True
     #threads = conf.require('threads')
@@ -189,7 +189,7 @@ def splitFile(conf):
     remove(inbuf)
     logging.log('Saving configuration into: %s' % configFile)
     with open(configFile, 'w') as fobj:
-        fobj.write(conf.toJSON(indent=4))
+        fobj.write(conf.to_json(indent=4))
     reportDone(conf, 'split')
     return True
 

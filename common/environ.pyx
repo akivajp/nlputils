@@ -79,6 +79,9 @@ cdef class StackHolder:
         #logging.log("__dealloc__")
         self.clear()
 
-cpdef push():
-    return StackHolder()
+def push(**args):
+    env = StackHolder()
+    for key, val in args.items():
+        env.set(key, str(val))
+    return env
 

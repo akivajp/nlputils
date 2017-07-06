@@ -21,6 +21,9 @@ from common import logging
 cdef long BUFFER_SIZE = 4096
 cdef str BACK_WHITE = '  \b\b'
 
+#cdef double REFRESH = 1
+cdef double REFRESH = 0.5
+
 #cdef class ProgressCounter(object):
 cdef class SpeedCounter(object):
     cdef readonly bool force
@@ -30,7 +33,7 @@ cdef class SpeedCounter(object):
     cdef readonly long count, pos, last_count, max_count
     cdef readonly str color
 
-    def __cinit__(self, str header="", long max_count=-1, double refresh=1, bool force=False, str color='green'):
+    def __cinit__(self, str header="", long max_count=-1, double refresh=REFRESH, bool force=False, str color='green'):
         #logging.log("__CINIT__", color="cyan")
         self.refresh = refresh
         self.header = header 
@@ -141,7 +144,7 @@ cdef class FileReader(object):
     cdef SpeedCounter counter
     cdef object source
 
-    def __cinit__(self, source, str header="", double refresh=1, bool force=False):
+    def __cinit__(self, source, str header="", double refresh=REFRESH, bool force=False):
         if isinstance(source, str):
             #self.source = files.open(source, 'r')
             #self.source = files.open(source, 'rb')
@@ -200,7 +203,7 @@ cdef class Iterator(object):
     cdef SpeedCounter counter
     cdef object source
 
-    def __cinit__(self, source, str header="", double refresh=1, bool force=False, long max_count=-1):
+    def __cinit__(self, source, str header="", double refresh=REFRESH, bool force=False, long max_count=-1):
         if isinstance(source, Iterable):
             self.source = source
         else:
@@ -211,14 +214,14 @@ cdef class Iterator(object):
         self.close()
 
     cdef close(self):
-        if self.source:
+        if self.source is not None:
             self.counter.flush()
             self.counter = None
             self.source = None
 
     def __iter__(self):
         cdef object obj
-        if self.source:
+        if self.source is not None:
             for obj in self.source:
                 self.counter.add(1, view=True)
                 yield obj
@@ -262,14 +265,14 @@ def about(num, bool show_bytes = False):
 cpdef open(path, header=""):
     return FileReader(path, header)
 
-cpdef pipeView(filepaths, mode='bytes', header=None, refresh=1, outfunc=None):
+cpdef pipeView(filepaths, mode='bytes', header=None, refresh=REFRESH, outfunc=None):
     #cdef str strBuf
     cdef bytes buf
     cdef long max_count = -1
     cdef long delta = 1
     cdef SpeedCounter counter
     if refresh < 0:
-        refresh = 1
+        refresh = REFRESH
     infiles = [files.open(fpath, 'rb') for fpath in filepaths]
     if infiles:
         #if mode == 'bytes':

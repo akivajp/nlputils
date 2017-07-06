@@ -56,7 +56,7 @@ def getContentSize(path):
     '''get the file content size (expanded size for compressed one)'''
     try:
         f_in = _open(path, 'rb')
-        if isGzipped(path):
+        if is_gzipped(path):
             f_in.seek(-8, 2)
             crc32 = gzip.read32(f_in)
             isize = gzip.read32(f_in)
@@ -71,16 +71,16 @@ def getContentSize(path):
         return -1
 
 
-def getExt(filename):
+def get_ext(filename):
     '''get the extension of given file'''
     (name, ext) = os.path.splitext(filename)
     return ext
 
-def isIOType(obj):
-    #return isinstance(obj, (io.IOBase,file))
-    return isinstance(obj, FileType)
+#def isIOType(obj):
+#    #return isinstance(obj, (io.IOBase,file))
+#    return isinstance(obj, FileType)
 
-def isGzipped(filename):
+def is_gzipped(filename):
     '''check whether the given file is compressed by gzip or not'''
     try:
         f = gzip.open(filename, 'r')
@@ -131,14 +131,14 @@ def safeMakeDirs(dirpath, **options):
 
 def open(filename, mode = 'r'):
     '''open the plain/compressed file transparently'''
-    if getExt(filename) == '.gz' or isGzipped(filename):
-        #logging.debug("gzip open mode")
-        fileObj = gzip.open(filename, mode)
-        #fileObj = gzip.GzipFile(filename, mode)
+    if get_ext(filename) == '.gz':
+        file_obj = gzip.open(filename, mode)
+    elif mode.find('r') >= 0 and is_gzipped(filename):
+        file_obj = gzip.open(filename, mode)
     else:
         #logging.debug("normal open mode")
-        fileObj = _open(filename, mode)
-    return fileObj
+        file_obj = _open(filename, mode)
+    return file_obj
 #    if str is bytes:
 #        '''ascii-8 based strings (for python 2.X)'''
 #        return fileObj
@@ -161,7 +161,8 @@ def rawfile(f):
         #return f.buffer
         # might be duplicated buffer
         return rawfile(f.buffer)
-    elif isIOType(f):
+    #elif isIOType(f):
+    elif isinstance(f, FileType):
         return f
     else:
         logging.debug(f)

@@ -42,9 +42,9 @@ def get_debug_level():
     if not mode:
         return 0
     else:
-        if mode.lower() in ('', 'false'):
+        if mode.lower() in ('', 'false', 'off'):
             return 0
-        elif mode.lower() in ('true',):
+        elif mode.lower() in ('true', 'on'):
             return 1
         else:
             try:
@@ -58,9 +58,9 @@ def get_color_mode():
     if not mode:
         auto = True
     else:
-        if mode.lower() in ('false'):
+        if mode.lower() in ('false', 'off'):
             return False
-        elif mode.lower() in ('true', 'force'):
+        elif mode.lower() in ('true', 'on', 'force'):
             return True
         elif mode.lower() in ('', 'auto',):
             auto = True
@@ -150,7 +150,8 @@ def debug(msg, color='yellow', level = 1):
         name     = f[3]
         code     = f[4]
         if code:
-            str_print = "[%s:%s %s] in function '%s': " % (filename, line, timestamp(), code[0].strip())
+            #str_print = "[%s:%s %s] in function '%s': " % (filename, line, timestamp(), code[0].strip())
+            str_print = "[%s:%s %s] '%s': " % (filename, line, timestamp(), code[0].strip())
         else:
             str_print = "[%s:%s %s] : " % (filename, line, timestamp())
         str_print += repr(msg)
