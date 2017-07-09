@@ -49,7 +49,7 @@ cdef class CoOccurrence:
         if cooc:
             self.cooc = cooc
 
-    cpdef str toStr(self, float margin = 0):
+    cpdef str to_str(self, float margin = 0):
         cdef str name = self.__class__.__name__
         cdef str mod  = self.__class__.__module__
         cdef str src  = str(numbers.toNumber(self.src,margin))
@@ -58,7 +58,7 @@ cdef class CoOccurrence:
         return "%s.%s(src = %s, trg = %s, cooc = %s)" % (mod, name, src, trg, cooc)
 
     def __str__(self):
-        return self.toStr(0)
+        return self.to_str(0)
 
 cdef class Record(object):
     cdef public str src, trg
@@ -118,7 +118,7 @@ cdef class Record(object):
         recRev.src = self.trg
         recRev.trg = self.src
         recRev.counts = self.counts.getReversed()
-#        debug.log(self.toStr())
+#        debug.log(self.to_str())
 #        debug.log(self.aligns)
 #        recRev.aligns = getRevAligns(self.aligns)
         recRev.aligns = getRevAlignSet(self.aligns)
@@ -182,7 +182,7 @@ class MosesRecord(Record):
 #        return self.trg.split(' ')
 #    trgTerms = property(getTrgTerms)
 
-    def toStr(self, s = ' ||| '):
+    def to_str(self, s = ' ||| '):
         strFeatures = getStrMosesFeatures(self.features)
 #        strAligns = str.join(' ', self.aligns)
         strAligns = str.join(' ', sorted(self.aligns) )
@@ -261,7 +261,7 @@ cdef class TravatarRecord(Record):
     def __cinit__(self, object line="", str delim='|||'):
         Record.__init__(self)
         self.delim = delim
-        self.loadLine(compat.toStr(line), delim)
+        self.loadLine(compat.to_str(line), delim)
 
 #    cpdef getSrcSymbols(self):
 #      return getTravatarSymbols(self.src)
@@ -397,7 +397,7 @@ cdef class TravatarRecord(Record):
 #        d['aligns'] = self.aligns
 #        return d
 
-    def toStr(self, s = ' ||| '):
+    def to_str(self, s = ' ||| '):
       strFeatures = getStrTravatarFeatures(self.features)
       strCounts = ""
       if self.counts.cooc > 0:

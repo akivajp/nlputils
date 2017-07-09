@@ -43,7 +43,7 @@ def saveRecords(saveFile, records, nbest):
             newRecords.append( records[i] )
         records = newRecords
     for rec in records:
-        saveFile.write( rec.toStr() )
+        saveFile.write( rec.to_str() )
 
 def filterTable(srcFile, saveFile, rules, nbest, progress = False, RecordClass = records.MosesRecord):
     if type(srcFile) == str:
@@ -64,7 +64,7 @@ def filterTable(srcFile, saveFile, rules, nbest, progress = False, RecordClass =
                 records = []
         if matchRules(rec, rules):
             records.append( rec )
-#          output.write( rec.toStr() )
+#          output.write( rec.to_str() )
     if records:
         saveRecords(saveFile, records, nbest)
     saveFile.close()

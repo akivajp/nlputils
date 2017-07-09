@@ -16,19 +16,19 @@ from nlputils.common import compat
 from nlputils.common import logging
 
 REPLACE_MAP = {
-    compat.toUnicode('<'): compat.toUnicode('-LT-'),
-    compat.toUnicode('>'): compat.toUnicode('-GT-'),
-    compat.toUnicode('('): compat.toUnicode('-LRB-'),
-    compat.toUnicode(')'): compat.toUnicode('-RRB-'),
-    compat.toUnicode('{'): compat.toUnicode('-LCB-'),
-    compat.toUnicode('}'): compat.toUnicode('-RCB-'),
-    compat.toUnicode('['): compat.toUnicode('-LSB-'),
-    compat.toUnicode(']'): compat.toUnicode('-RSB-'),
-    compat.toUnicode('|'): compat.toUnicode('-BAR-'),
-    compat.toUnicode('&'): compat.toUnicode('-AMP-'),
-    compat.toUnicode('\t'): compat.toUnicode(' '),
-    unicodedata.lookup('ZERO WIDTH SPACE'): compat.toUnicode(' '),
-    unicodedata.lookup('ZERO WIDTH NO-BREAK SPACE'): compat.toUnicode(' '),
+    compat.to_unicode('<'): compat.to_unicode('-LT-'),
+    compat.to_unicode('>'): compat.to_unicode('-GT-'),
+    compat.to_unicode('('): compat.to_unicode('-LRB-'),
+    compat.to_unicode(')'): compat.to_unicode('-RRB-'),
+    compat.to_unicode('{'): compat.to_unicode('-LCB-'),
+    compat.to_unicode('}'): compat.to_unicode('-RCB-'),
+    compat.to_unicode('['): compat.to_unicode('-LSB-'),
+    compat.to_unicode(']'): compat.to_unicode('-RSB-'),
+    compat.to_unicode('|'): compat.to_unicode('-BAR-'),
+    compat.to_unicode('&'): compat.to_unicode('-AMP-'),
+    compat.to_unicode('\t'): compat.to_unicode(' '),
+    unicodedata.lookup('ZERO WIDTH SPACE'): compat.to_unicode(' '),
+    unicodedata.lookup('ZERO WIDTH NO-BREAK SPACE'): compat.to_unicode(' '),
 }
 
 def getLongestCommonPrefix(s1, s2):
@@ -54,11 +54,11 @@ def replaceChar(c):
         return c
 
 def normalize(line):
-    line = compat.toUnicode( line.strip() )
+    line = compat.to_unicode( line.strip() )
     line = unicodedata.normalize('NFKD', line)
-    line = compat.toUnicode('').join(map(replaceChar, line))
+    line = compat.to_unicode('').join(map(replaceChar, line))
     line = unicodedata.normalize('NFC', line)
-    line = compat.toStr(line)
+    line = compat.to_str(line)
     line = re.sub(r'\s+', ' ', line)
     return line
 
@@ -120,7 +120,7 @@ def cleanParallel(**args):
             logging.warn("%s (Line %s)" % (e, i))
     counter.flush()
 
-def cmdCleanParallel(args):
+def main(args):
     DEFAULT_MIN_LENGTH = 1
     DEFAULT_MAX_LENGTH = 80
     DEFAULT_RATIO = 9.0
@@ -134,5 +134,5 @@ def cmdCleanParallel(args):
     cleanParallel(**vars(parsed))
 
 if __name__ == '__main__':
-    cmdCleanParallel(sys.argv[1:])
+    main(sys.argv[1:])
 

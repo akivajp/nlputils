@@ -50,16 +50,44 @@ cdef void add_sub_matrix(np.ndarray target_matrix, list x_indices, list y_indice
     indices1, indices2 = grid_indices(x_indices, y_indices)
     np.add.at(target_matrix, (indices1,indices2), source_matrix[indices1,indices2])
 
+cdef class Model:
+    cdef np.ndarray trans_dist
+    cdef Vocab vocab
+    #cdef StringEnumerator src_vocab
+    #cdef StringEnumerator trg_vocab
+
+    def __cinit__(self):
+        self.vocab = Vocab()
+
+    cpdef double calc_pair_entropy(self, list src_sent, list trg_sent):
+        cdef np.ndarray trans_matrix
+        trans_matrix = sub_matrix(self.trans_dist, src_sent, trg_sent)
+        return -np.log(trans_matrix.sum(axis=0) / len(src_sent)).sum()
+
+    cpdef double calc_entropy(self, list sent_pairs):
+        cdef float total_entropy = 0
+        logging.log('calculating entropy')
+        for i, (src_sent, trg_sent) in enumerate(progress.view(sent_pairs, 'progress')):
+            total_entropy += self.calc_pair_entropy(src_sent, trg_sent)
+        return total_entropy / len(sent_pairs)
+
+    cpdef tuple ids_pair_to_str_pair(self, src_ids, trg_ids):
+        cdef StringEnumerator src_vocab = self.vocab.src
+        cdef StringEnumerator trg_vocab = self.vocab.trg
+        cdef src_str = str.join(' ', [src_vocab.id2str(i) for i in src_ids[:-1]])
+        cdef trg_str = str.join(' ', [trg_vocab.id2str(i) for i in trg_ids])
+        return src_str, trg_str
+
 cdef class Trainer:
     cdef Config conf
-    #cdef dict trans_dist_src2trg
-    cdef np.ndarray trans_dist_src2trg
+    #cdef np.ndarray trans_dist_src2trg
     cdef object env
     cdef list sent_pairs
     cdef float last_entropy
-    cdef Vocab vocab
+    #cdef Vocab vocab
     cdef np.ndarray cooc_src_trg
     cdef list cooc_id_src_trg
+    cdef Model model
 
     def __cinit__(self, conf, **others):
         self.conf = Config(conf)
@@ -69,52 +97,15 @@ cdef class Trainer:
             self.env.set('DEBUG', '1')
         if conf.data.quiet:
             self.env.set('QUIET', '1')
+        #self.model = Model()
         check_config(conf)
 
     def __dealloc__(self):
         self.clear()
 
-    #cpdef calc_entropy(self, sent_pairs):
-    #    entropy = 0
-    #    logging.log('calculating entropy')
-    #    for i, (src_sent, trg_sent) in enumerate(progress.view(sent_pairs, 'progress')):
-    #        prob = 1.0
-    #        for trg in trg_sent:
-    #            sum_for_align = 0
-    #            for src in src_sent:
-    #                sum_for_align += self.trans_dist_src2trg[src,trg]
-    #            prob = prob * sum_for_align / len(src_sent)
-    #        entropy -= math.log(prob)
-    #    return entropy / len(sent_pairs)
-
-    cpdef double calc_pair_entropy(self, list src_sent, list trg_sent):
-        #cdef np.ndarray src_indices, trg_indices
-        #src_indices, trg_indices = np.meshgrid(src_sent, trg_sent)
-        cdef np.ndarray trans_matrix
-        #trans = self.trans_dist_src2trg[np.meshgrid(src_sent,trg_sent)]
-        #trans_matrix = self.trans_dist_src2trg[np.meshgrid(src_sent,trg_sent)].T
-        #trans_matrix = self.trans_dist_src2trg[np.meshgrid(src_sent,trg_sent,sparse=True)].T
-        trans_matrix = sub_matrix(self.trans_dist_src2trg, src_sent, trg_sent)
-        #trans_matrix = self.trans_dist_src2trg[src_sent][:,trg_sent]
-        #prob = (trans.sum(axis=1) / len(src_sent)).astype(np.float64).prod()
-        #logging.log(prob)
-        #return prob
-        #return -math.log(prob)
-        #return -math.log( (trans_matrix.sum(axis=1) / len(src_sent)).prod() )
-        #return -math.log( (trans_matrix.sum(axis=0) / len(src_sent)).prod() )
-        return -np.log(trans_matrix.sum(axis=0) / len(src_sent)).sum()
-        #return entropy
-
-    cpdef double calc_entropy(self, list sent_pairs):
-        cdef float total_entropy = 0
-        logging.log('calculating entropy')
-        for i, (src_sent, trg_sent) in enumerate(progress.view(sent_pairs, 'progress')):
-            total_entropy += self.calc_pair_entropy(src_sent, trg_sent)
-        return total_entropy / len(sent_pairs)
-
-    cpdef count_cooccurrence(self, sent_pairs):
-        cdef StringEnumerator vocab_src = self.vocab.src
-        cdef StringEnumerator vocab_trg = self.vocab.trg
+    cpdef np.ndarray count_cooccurrence(self, sent_pairs):
+        cdef StringEnumerator vocab_src = self.model.vocab.src
+        cdef StringEnumerator vocab_trg = self.model.vocab.trg
         cdef np.ndarray cooc_src_trg
         cdef int src, trg
         cdef np.ndarray src_indices, trg_indices
@@ -128,8 +119,8 @@ cdef class Trainer:
         return cooc_src_trg
 
     cpdef calc_uniform_dist(self):
-        cdef StringEnumerator vocab_src = self.vocab.src
-        cdef StringEnumerator vocab_trg = self.vocab.trg
+        cdef StringEnumerator vocab_src = self.model.vocab.src
+        cdef StringEnumerator vocab_trg = self.model.vocab.trg
         cdef np.ndarray uniform_dist
         cdef int src, trg
         logging.log("calculating uniform distribution for word translation probability")
@@ -142,12 +133,15 @@ cdef class Trainer:
         self.env.clear()
 
     cpdef init(self):
-        self.vocab = Vocab()
-        self.vocab.src.append(NULL_SYMBOL)
+        self.model = Model()
+        self.model.vocab = Vocab()
+        self.model.vocab.src.append(NULL_SYMBOL)
         #self.vocab.trg.append(NULL_SYMBOL)
         self.sent_pairs = self.load_sent_pairs()
+        logging.log("source vocabulary size: %s" % len(self.model.vocab.src))
+        logging.log("target vocabulary size: %s" % len(self.model.vocab.trg))
         self.cooc_src_trg = self.count_cooccurrence(self.sent_pairs)
-        self.trans_dist_src2trg = self.calc_uniform_dist()
+        self.model.trans_dist = self.calc_uniform_dist()
 
     cpdef list load_sent_pairs(self):
         cdef str word
@@ -167,38 +161,45 @@ cdef class Trainer:
             src_words.append(NULL_SYMBOL)
             #src_words = map(self.vocab.src.str2id, src_words)
             #trg_words = map(self.vocab.trg.str2id, trg_words)
-            src_words = [self.vocab.src.str2id(word) for word in src_words]
-            trg_words = [self.vocab.trg.str2id(word) for word in trg_words]
+            src_words = [self.model.vocab.src.str2id(word) for word in src_words]
+            trg_words = [self.model.vocab.trg.str2id(word) for word in trg_words]
             sent_pairs.append( (src_words, trg_words) )
         return sent_pairs
         #self.sent_pairs = sent_pairs
 
-    cpdef save(self, out_path, threshold = 0.01):
-        cdef StringEnumerator vocab_src = self.vocab.src
-        cdef StringEnumerator vocab_trg = self.vocab.trg
+    cpdef save_align(self, out_path, threshold = 0.01):
+        cdef StringEnumerator vocab_src = self.model.vocab.src
+        cdef StringEnumerator vocab_trg = self.model.vocab.trg
         cdef tuple indices
         cdef int src, trg
         cdef float prob
         cdef str record
         with files.open(out_path, 'wt') as fobj:
             logging.log("storing translation probabilities into file (threshold=%s): %s" % (threshold,out_path))
-            indices = np.where(self.trans_dist_src2trg >= threshold)
+            indices = np.where(self.model.trans_dist>= threshold)
             for src, trg in progress.view(zip(*indices), 'storing', max_count=len(indices[0])):
-                prob = self.trans_dist_src2trg[src,trg]
+                prob = self.model.trans_dist[src,trg]
                 record = "%s\t%s\t%s\n" % (vocab_src.id2str(src), vocab_trg.id2str(trg), prob)
                 fobj.write(record)
-            #for src, dist_trg in enumerate(progress.view(self.trans_dist_src2trg, 'storing')):
-            #    #logging.debug(dist_trg)
-            #    for trg, prob in enumerate(dist_trg):
-            #        if prob > threshold:
-            #            record = "%s\t%s\t%s\n" % (vocab_src.id2str(src), vocab_trg.id2str(trg), prob)
-            #            fobj.write(record)
+
+    cpdef save_scores(self, out_path):
+        cdef double entropy = 0
+        cdef str src_string, trg_string
+        cdef list src_ids, trg_ids
+        cdef str record
+        logging.log("calculating and storing into file: %s"  % (self.conf.data.save_scores))
+        with files.open(self.conf.data.save_scores, 'wt') as fobj:
+            for i, (src_ids, trg_ids) in enumerate(progress.view(self.sent_pairs, 'progress')):
+                entropy = self.model.calc_pair_entropy(src_ids, trg_ids)
+                src_string, trg_string = self.model.ids_pair_to_str_pair(src_ids, trg_ids)
+                record = "%s\t%s\t%s\n" % (entropy, src_string, trg_string)
+                fobj.write(record)
 
     cpdef train(self):
         cdef long i
         logging.log("start training IBM Model 1")
         self.init()
-        self.last_entropy = self.calc_entropy(self.sent_pairs)
+        self.last_entropy = self.model.calc_entropy(self.sent_pairs)
         logging.log("initial entropy: %s" % self.last_entropy)
         for step in range(self.conf.data.iteration_limit):
             logging.log("--")
@@ -206,7 +207,7 @@ cdef class Trainer:
             # train 1 step
             self.train_step()
             # calculate entropy
-            entropy = self.calc_entropy(self.sent_pairs)
+            entropy = self.model.calc_entropy(self.sent_pairs)
             logging.log("entropy: %s" % entropy)
             if entropy == self.last_entropy:
                 break
@@ -218,12 +219,11 @@ cdef class Trainer:
         cdef list src_sent, trg_sent
         cdef np.ndarray count_src2trg, total_src
         cdef np.ndarray trg_factor
-        cdef StringEnumerator vocab_src = self.vocab.src
-        cdef StringEnumerator vocab_trg = self.vocab.trg
+        cdef StringEnumerator vocab_src = self.model.vocab.src
+        cdef StringEnumerator vocab_trg = self.model.vocab.trg
         cdef tuple grid
 
-        #if not self.trans_dist_src2trg:
-        if len(self.trans_dist_src2trg) == 0:
+        if len(self.model.trans_dist) == 0:
             self.init()
         else:
             count_src2trg = np.zeros([len(vocab_src),len(vocab_trg),], np.float64)
@@ -233,13 +233,13 @@ cdef class Trainer:
                 grid = grid_indices(src_sent, trg_sent)
                 # compute normalization
                 trg_factor = np.zeros(len(vocab_trg), np.float64)
-                np.add.at(trg_factor, trg_sent, sub_matrix(self.trans_dist_src2trg,src_sent,trg_sent).sum(axis=0))
+                np.add.at(trg_factor, trg_sent, sub_matrix(self.model.trans_dist,src_sent,trg_sent).sum(axis=0))
                 # collect counts
-                np.add.at(count_src2trg, grid,     self.trans_dist_src2trg[grid] / trg_factor[trg_sent])
-                np.add.at(total_src, src_sent, (self.trans_dist_src2trg[grid] / trg_factor[trg_sent]).sum(axis=1))
+                np.add.at(count_src2trg, grid,     self.model.trans_dist[grid] / trg_factor[trg_sent])
+                np.add.at(total_src, src_sent, (self.model.trans_dist[grid] / trg_factor[trg_sent]).sum(axis=1))
             # estimate probabilities
             logging.log("estimating word translation probabilities")
-            self.trans_dist_src2trg = count_src2trg / total_src.reshape([-1,1])
+            self.model.trans_dist = count_src2trg / total_src.reshape([-1,1])
 
 def check_config(conf):
     if conf.data.verbose:
@@ -250,14 +250,17 @@ def train_ibm_model1(conf, **others):
     conf.update(others)
     trainer = Trainer(conf, **others)
     trainer.train()
-    trainer.save(conf.data.save_align_path, conf.data.threshold)
+    trainer.save_align(conf.data.save_align_path, conf.data.threshold)
+    if conf.data.save_scores:
+        trainer.save_scores(conf.data.save_scores)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('src_path', metavar='src_path (in)', help='file containing source-side lines of parallel text', type=str)
     parser.add_argument('trg_path', help='file containing target-side lines of parallel text', type=str)
     parser.add_argument('save_align_path', help='output file to save alignment', type=str)
-    parser.add_argument('--iteration_limit', '-I', help='maximum iteration number of EM algorithm (default: %(default)s)', type=int, default=ITERATION_LIMIT)
+    parser.add_argument('--save-scores', '-S', help='output file to save entropy of each each alignment', type=str, default=None)
+    parser.add_argument('--iteration-limit', '-I', help='maximum iteration number of EM algorithm (default: %(default)s)', type=int, default=ITERATION_LIMIT)
     parser.add_argument('--threshold', '-t', help='threshold of translation probabilities to save', type=float, default=0.01)
     parser.add_argument('--character', '-c', help='chacacter based alignment mode', action='store_true')
     parser.add_argument('--verbose', '-v', help='verbose mode (including debug info)', action='store_true')

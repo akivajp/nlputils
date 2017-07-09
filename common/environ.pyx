@@ -62,7 +62,8 @@ cdef class StackHolder:
                     #logging.log("unset key from env: %s" % (key,))
                     os.environ.pop(key)
         self.env_layer.clear()
-        self.back_log.clear()
+        # note: python2.7 does not have list.clear
+        del self.back_log[:]
 
     def __enter__(self):
         #logging.log("__enter__")

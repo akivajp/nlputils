@@ -89,6 +89,25 @@ def is_gzipped(filename):
     except Exception as e:
         return False
 
+def is_mode(fobj, mode):
+    if mode in ('r', 'read'):
+        return fobj.mode.find('r') >= 0
+    elif mode in ('w', 'write'):
+        return fobj.mode.find('w') >= 0
+    elif mode in ('b', 'binary'):
+        if fobj.mode.find('b') >= 0:
+            return True
+        elif fobj.mode.find('t') >= 0:
+            return False
+        else:
+            return sys.version_info.major < 3
+    elif mode in ('t', 'text'):
+        if fobj.mode.find('t') >= 0:
+            return True
+        elif fobj.mode.find('b') >= 0:
+            return False
+        else:
+            return sys.version_info.major >= 3
 
 def load(filename, progress = True, bs = 10 * 1024 * 1024):
     '''load all the content of given file (expand if compressed)'''
@@ -171,12 +190,16 @@ def rawfile(f):
         assert False
 
 def rawsize(f):
-    raw = rawfile(f)
-    pos = raw.tell()
-    raw.seek(-1, 2)
-    size = raw.tell()
-    raw.seek(pos, 0)
-    return size
+    try:
+        raw = rawfile(f)
+        pos = raw.tell()
+        raw.seek(-1, 2)
+        size = raw.tell()
+        raw.seek(pos, 0)
+        return size
+    except Exception as e:
+        logging.debug(e)
+        return -1
 
 def rawremain(f):
     return rawsize(f) - rawtell(f)

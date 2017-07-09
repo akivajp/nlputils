@@ -7,7 +7,7 @@ import sys
 import collections
 import itertools
 
-cdef bytes __py2__toBytes(s):
+cdef bytes __py2__to_bytes(s):
     '''
     convert to byte string
     '''
@@ -15,7 +15,7 @@ cdef bytes __py2__toBytes(s):
         return s.encode('utf-8')
     else:
         return bytes(s)
-cdef bytes __py3__toBytes(s):
+cdef bytes __py3__to_bytes(s):
     '''
     convert to byte string
     '''
@@ -27,8 +27,7 @@ cdef bytes __py3__toBytes(s):
         return bytes(str(s), 'utf-8')
 
 
-cdef str __py2__toStr(data):
-#cdef __py2__toStr(data):
+cdef str __py2__to_str(data):
     '''
     convert to object based on standard strings
     '''
@@ -38,13 +37,12 @@ cdef str __py2__toStr(data):
         else:
             return data
     #elif isinstance(data, collections.Mapping):
-    #    return type(data)(map(toStr, data.iteritems()))
+    #    return type(data)(map(to_str, data.iteritems()))
     #elif isinstance(data, collections.Iterable):
-    #    return type(data)(map(toStr, data))
+    #    return type(data)(map(to_str, data))
     else:
         return str(data)
-cdef str __py3__toStr(data):
-#cdef __py3__toStr(data):
+cdef str __py3__to_str(data):
     '''
     convert to object based on standard strings
     '''
@@ -53,18 +51,18 @@ cdef str __py3__toStr(data):
     elif isinstance(data, bytes):
         return str(data, 'utf-8')
     #elif isinstance(data, collections.Mapping):
-    #    return type(data)(map(toStr, data.items()))
+    #    return type(data)(map(to_str, data.items()))
     #elif isinstance(data, collections.Iterable):
-    #    return type(data)(map(toStr, data))
+    #    return type(data)(map(to_str, data))
     else:
         return str(data)
 
-cdef unicode __py2__toUnicode(s):
+cdef unicode __py2__to_unicode(s):
     '''
     convert to unicode string
     '''
     return unicode(s, 'utf-8')
-cdef unicode __py3__toUnicode(s):
+cdef unicode __py3__to_unicode(s):
     '''
     convert to unicode string
     '''
@@ -75,16 +73,16 @@ cdef unicode __py3__toUnicode(s):
 
 if sys.version_info.major == 2:
     # Python2
-    toBytes   = __py2__toBytes
-    toStr     = __py2__toStr
-    toUnicode = __py2__toUnicode
+    to_bytes   = __py2__to_bytes
+    to_str     = __py2__to_str
+    to_unicode = __py2__to_unicode
     range = xrange
     zip   = itertools.izip
 elif sys.version_info.major == 3:
     # Python3
-    toBytes   = __py3__toBytes
-    toStr     = __py3__toStr
-    toUnicode = __py3__toUnicode
+    to_bytes   = __py3__to_bytes
+    to_str     = __py3__to_str
+    to_unicode = __py3__to_unicode
     range = range
     zip   = zip
 else:

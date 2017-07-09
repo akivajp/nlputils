@@ -116,9 +116,9 @@ cdef class Config:
             yield key, self[key]
 
     def load_json(self, strJSON, override=True):
-        #self.update(json.loads(compat.toStr(strJSON)))
+        #self.update(json.loads(compat.to_str(strJSON)))
         uniDict = json.loads(strJSON)
-        #self.update(compat.toStr(uniDict))
+        #self.update(compat.to_str(uniDict))
         self.update(uniDict, override)
 
     def require(self, name, desc = None, typeOf = None):

@@ -518,14 +518,14 @@ def writeRecords(fileObj, records):
 #  for rec in flattenRecords(records):
   for rec in flattenRecords(records, sort = True):
       if rec.counts.co > 0:
-          fileObj.write( rec.toStr() )
+          fileObj.write( rec.to_str() )
 
 
 def writeRecord(rec, workset):
     '''write the pivoted records in the queue into the table file'''
     if rec:
         if rec.counts.cooc > 0:
-            workset.foutPivot.write( rec.toStr() )
+            workset.foutPivot.write( rec.to_str() )
             workset.foutPivot.flush()
             workset.numRecSrcTrg += 1
             workset.setPhrasesSrcTrg.add(rec.src)
@@ -583,11 +583,11 @@ def calcLexWeights(tablePath, lexCounts, savePath, RecordClass = MosesRecord):
         if rec.trg.find('|COL|') < 0:
             rec.features['egfl'] = calcLexWeight(rec, lexCounts, reverse = False)
             rec.features['fgel'] = calcLexWeight(rec, lexCounts, reverse = True)
-            saveFile.write( rec.toStr() )
+            saveFile.write( rec.to_str() )
         else:
             rec.features['0egfl'] = calcLexWeight(rec, lexCounts, reverse = False)
             rec.features['0fgel'] = calcLexWeight(rec, lexCounts, reverse = True)
-            saveFile.write( rec.toStr() )
+            saveFile.write( rec.to_str() )
     saveFile.close()
     tableFile.close()
 

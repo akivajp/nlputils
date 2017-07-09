@@ -14,42 +14,45 @@ import sys
 # Local libraries
 from nlputils.common import compat
 from nlputils.common import files
+from nlputils.common import environ
 from nlputils.common import logging
 from nlputils.common import numbers
 from nlputils.common import progress
 from nlputils.common.config import Config
 
-def getValidIndices(conf):
+def get_valid_indices(conf):
     #indices = set()
     indices = []
-    inFiles = [files.open(path) for path in conf.data.inputFiles]
-    genLines = compat.zip(*inFiles)
-    if conf.data.progress:
-        genLines = progress.view(genLines, 'reading input files')
-    for i, lines in enumerate(genLines):
-        if conf.data.ignoreEmpty:
-            if all([line.rstrip("\n") for line in lines]):
-                    indices.append(i)
-        else:
-            indices.append(i)
+    infiles = [files.open(path,'rb') for path in conf.data.inpaths]
+    for i, lines in enumerate(progress.view(compat.zip(*infiles), 'loading')):
+        try:
+            lines = map(compat.to_unicode, lines)
+            if conf.data.ignore_empty:
+                if all([line.rstrip("\n") for line in lines]):
+                        indices.append(i)
+            else:
+                indices.append(i)
+        except Exception as e:
+            #sys.stdout.write("\n")
+            logging.warn("%s (Line %s)" % (e, i))
     return indices
 
-def randomSplit(conf, **others):
+def random_split(conf, **others):
     conf = Config(conf, **others)
-    checkConfig(conf)
+    check_config(conf)
 
-    inputFiles = conf.data.inputFiles
+    inpaths = conf.data.inpaths
     prefixes = conf.data.prefixes
     suffixes = conf.data.suffixes
     tags = conf.data.tags
-    splitSizes = conf.data.splitSizes
+    split_sizes = conf.data.split_sizes
     verbose = conf.data.verbose
 
-    for path in inputFiles:
+    for path in inpaths:
         files.testFile(path)
     if verbose:
         logging.log('Building sequence')
-    indices = getValidIndices(conf)
+    indices = get_valid_indices(conf)
     if verbose:
         logging.debug(len(indices))
     if conf.data.seed:
@@ -58,55 +61,50 @@ def randomSplit(conf, **others):
         logging.log("Randomizing sequence")
     random.shuffle(indices)
     start = 0
-    splitIndices = []
-    for size in splitSizes:
+    split_indices = []
+    for size in split_sizes:
         if size == '*':
             size = len(indices)
         elif size < 1:
             size = int(len(indices) * size)
         else:
             size = int(size)
-        splitIndices.append( set(indices[start:start+size]) )
+        split_indices.append( set(indices[start:start+size]) )
         start += size
-    splitSizes = list( map(len, splitIndices) )
-    for inPath, prefix, suffix in zip(inputFiles, prefixes, suffixes):
-        if progress:
-            inFile = progress.open(inPath, "processing file '%s'" % inPath)
-        else:
-            inFile = files.open(inPath)
-        outPaths = []
+    split_sizes = list( map(len, split_indices) )
+    for inpath, prefix, suffix in zip(inpaths, prefixes, suffixes):
+        infile = files.open(inpath, 'rb')
+        outpaths = []
         for tag in tags:
             if suffix:
-                outPath = "%s%s.%s" % (prefix, tag, suffix)
+                outpath = "%s%s.%s" % (prefix, tag, suffix)
             else:
-                outPath = "%s%s" % (prefix, tag)
-            outPaths.append(outPath)
-        if verbose:
-            logging.log("Writing lines into splitted files: %s" % outPaths)
-            logging.log("Split sizes: %s" % splitSizes)
-        outFiles = [files.open(outPath,'wt') for outPath in outPaths]
-        for lineIndex, line in enumerate(inFile):
-            for fileIndex, outFile in enumerate(outFiles):
-                if lineIndex in splitIndices[fileIndex]:
-                    outFile.write(line)
+                outpath = "%s%s" % (prefix, tag)
+            outpaths.append(outpath)
+        logging.log("Writing lines into splitted files: %s" % outpaths)
+        logging.log("Split sizes: %s" % split_sizes)
+        outfiles = [files.open(outpath,'wb') for outpath in outpaths]
+        for line_index, line in enumerate(progress.view(infile, 'processing')):
+            for file_index, outfile in enumerate(outfiles):
+                if line_index in split_indices[file_index]:
+                    outfile.write(line)
     if conf.data.ids:
-        for fileIndex, tag in enumerate(tags):
-            outPath = "%s.%s" % (tag, conf.data.ids)
-            genIDs = iter(sorted(splitIndices[fileIndex]))
+        for file_index, tag in enumerate(tags):
+            outpath = "%s.%s" % (tag, conf.data.ids)
+            genIDs = iter(sorted(split_indices[file_index]))
             if progress:
-                genIDs = progress.view(genIDs, "Writing IDs into '%s'" % outPath)
-            outFile = files.open(outPath, 'wt')
-            for lineIndex in genIDs:
+                genIDs = progress.view(genIDs, "Writing IDs into '%s'" % outpath)
+            outfile = files.open(outpath, 'wt')
+            for line_index in genIDs:
                 # line index is zero origin, line id should be +1
-                outFile.write("%d\n" % (lineIndex+1))
+                outfile.write("%d\n" % (line_index+1))
 
-def checkConfig(conf):
+def check_config(conf):
     numInput = len(conf.data.input)
     numTags  = len(conf.data.tags)
-    conf.data.ignoreEmpty = conf.data.ignore_empty
-    conf.data.inputFiles  = conf.data.input
+    conf.data.inpaths = conf.data.input
     conf.data.seed        = conf.data.random_seed
-    conf.data.splitSizes  = conf.data.split_sizes
+    conf.data.split_sizes  = conf.data.split_sizes
     if not conf.data.prefixes:
         conf.data.prefixes = [''] * numInput
     elif len(conf.data.prefixes) != numInput:
@@ -119,23 +117,23 @@ def checkConfig(conf):
         msg="Number of suffixes should be same with input files (expected %d, but given %d)"
         logging.alert(msg % (numInput, len(conf.data.suffixes)))
         return False
-    if len(conf.data.splitSizes) != numTags:
+    if len(conf.data.split_sizes) != numTags:
         msg="Number of split sizes should be same with input files (expected %d, but given %d)"
-        logging.alert(msg % (numTags, len(conf.data.splitSizes)))
+        logging.alert(msg % (numTags, len(conf.data.split_sizes)))
         return False
-    for i, size in enumerate(conf.data.splitSizes):
+    for i, size in enumerate(conf.data.split_sizes):
         if size == '*':
             pass
         else:
             try:
                 n = float(size)
-                conf.data.splitSizes[i] = n
+                conf.data.split_sizes[i] = n
             except Exception as e:
                 msg = "string '%s' cannnot be converted to number (given invalid split sizes: %s)"
-                logging.alert(msg % (size, conf.data.splitSizes))
+                logging.alert(msg % (size, conf.data.split_sizes))
             if n <= 0:
                 msg = "split size should be positive, but given negative: %s (given invalid split sizes: %s)"
-                logging.alert(msg % (n, conf.data.splitSizes))
+                logging.alert(msg % (n, conf.data.split_sizes))
     if conf.data.verbose:
         logging.debug(conf)
 
@@ -146,17 +144,20 @@ def main():
     parser.add_argument('--suffixes', '-S', help='suffixes of splittted files (should be same number with INPUT)', type=str, default=[], nargs='+')
     parser.add_argument('--tags', help='base names of splitted files (comma separated list)', type=str, required=True, nargs='+')
     parser.add_argument('--split-sizes', '-s', help='number of lines in splitted files (should be same number with TAGS)', type=str, required=True, nargs='+')
-    parser.add_argument('--progress', '-p', help='show progress', action='store_true')
     parser.add_argument('--ignore-empty', '-E', help='preventing empty lines to output', action='store_true')
-    parser.add_argument('--verbose', '-v', help='verbose mode', action='store_true')
+    parser.add_argument('--quiet', '-q', help='not showing staging log', action='store_true')
+    parser.add_argument('--verbose', '-v', help='verbose mode (including debug info)', action='store_true')
     parser.add_argument('--random-seed', '-R', help='random seed', type=int)
     parser.add_argument('--ids', metavar='SUFFIX', help='write original line numbers for each tags', nargs='?', const='ids')
     args = parser.parse_args()
+    logging.log('test')
     conf = Config()
     conf.update(vars(args))
-    if args.verbose:
+    with environ.push() as e:
+        if conf.data.verbose:
+            e.set('DEBUG', '1')
         logging.debug(args)
-    randomSplit(conf)
+        random_split(conf)
 
 if __name__ == '__main__':
     main()

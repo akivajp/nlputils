@@ -114,7 +114,7 @@ def put_color(content, color=None, force=False, newline=True):
 def log(msg, color='cyan'):
     #if not quiet:
     if not get_quiet_mode():
-        str_print = "[%s] %s" % (timestamp(), compat.toStr(msg))
+        str_print = "[%s] %s" % (timestamp(), compat.to_str(msg))
         put_color(str_print, color)
 
 #def test_inspect(index, s):

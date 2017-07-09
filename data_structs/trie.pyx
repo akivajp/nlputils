@@ -111,10 +111,10 @@ cdef class TwoWayIDMap(IDMap):
         #if n >= len(self.keyList):
         if n >= self.keyList.size():
             #self.keyList.append(key)
-            self.keyList.push_back(compat.toBytes(key))
+            self.keyList.push_back(compat.to_bytes(key))
         else:
             #self.keyList[n] = key
-            self.keyList[n] = compat.toBytes(key)
+            self.keyList[n] = compat.to_bytes(key)
         return n
 
     cpdef str id2str(self, long num):
@@ -126,10 +126,10 @@ cdef class TwoWayIDMap(IDMap):
         #if key:
         if not key.empty():
             #return key
-            return compat.toStr(key)
+            return compat.to_str(key)
         else:
             #raise IndexError(key)
-            raise IndexError(compat.toStr(key))
+            raise IndexError(compat.to_str(key))
 
     def ids(self):
         cdef long i
@@ -155,7 +155,7 @@ cdef class TwoWayIDMap(IDMap):
             k = self.keyList[i]
             if not k.empty():
                 #yield (i, k)
-                yield (i, compat.toStr(k))
+                yield (i, compat.to_str(k))
 
     def keys(self):
         cdef long i
@@ -167,7 +167,7 @@ cdef class TwoWayIDMap(IDMap):
             k = self.keyList[i]
             if not k.empty():
                 #yield k
-                yield compat.toStr(k)
+                yield compat.to_str(k)
 
     cpdef void purge(self):
         while True:

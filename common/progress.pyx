@@ -173,8 +173,9 @@ cdef class FileReader(object):
             self.source.close()
             self.source = None
 
-    cpdef str readline(self):
-        cdef str line
+    #cpdef str readline(self):
+    cpdef readline(self):
+        #cdef str line
         #cdef string line
         if self.source:
             line = self.source.readline()
@@ -182,17 +183,17 @@ cdef class FileReader(object):
             self.counter.set_position(files.rawtell(self.source))
             self.counter.view()
             return line
-            #return compat.toStr( line )
+            #return compat.to_str( line )
 
     def __iter__(self):
-        cdef str line
+        #cdef str line
         #cdef string line
         if self.source:
             for line in self.source:
                 #yield self.readline()
                 #self.counter.set(files.rawtell(self.source),view=True)
                 #yield(line)
-                #yield compat.toStr(line)
+                #yield compat.to_str(line)
                 self.counter.add(1)
                 self.counter.set_position(files.rawtell(self.source))
                 self.counter.view()
@@ -265,7 +266,7 @@ def about(num, bool show_bytes = False):
 cpdef open(path, header=""):
     return FileReader(path, header)
 
-cpdef pipeView(filepaths, mode='bytes', header=None, refresh=REFRESH, outfunc=None):
+cpdef pipe_view(filepaths, mode='bytes', header=None, refresh=REFRESH, outfunc=None):
     #cdef str strBuf
     cdef bytes buf
     cdef long max_count = -1

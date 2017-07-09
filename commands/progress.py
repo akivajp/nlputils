@@ -9,7 +9,7 @@ import nlputils.init
 import argparse
 import sys
 # Local libraries
-from common.progress import pipeView
+from common.progress import pipe_view
 
 def cmdPipeView(args):
     REFRESH_INTERVAL = 1
@@ -22,7 +22,7 @@ def cmdPipeView(args):
     mode = 'bytes'
     if parsed.lines:
         mode = 'lines'
-    pipeView(parsed.filepaths, mode=mode, head=parsed.name, refresh=parsed.refresh)
+    pipe_view(parsed.filepaths, mode=mode, head=parsed.name, refresh=parsed.refresh)
 
 def main():
     cmdPipeView(sys.argv[1:])
