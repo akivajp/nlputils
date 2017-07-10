@@ -6,6 +6,7 @@
 
 # Standard libraries
 import json
+from collections import Iterable
 
 # Local libraries
 from nlputils.common import compat
@@ -105,11 +106,24 @@ cdef class Config:
             self.data.__dict__[name] = newVal
             return newVal
 
-    def get(self, key, default = None):
-        if key in self:
-            return self[key]
+    def has(self, key):
+        if type(key) is str:
+            return key in self
+        elif isinstance(key, Iterable):
+            return all(map(self.has, key))
         else:
-            return default
+            raise TypeError("Expected str or iterable type, but given: %s" % type(key).__name__)
+
+    def get(self, key, default = None):
+        if type(key) is str:
+            if key in self:
+                return self[key]
+            else:
+                return default
+        elif isinstance(key, Iterable):
+            return [self.get(elem, default) for elem in key]
+        else:
+            raise TypeError("Expected str or iterable type, but given: %s" % type(key).__name__)
 
     def items(self):
         for key in self:
