@@ -4,25 +4,12 @@
 '''functions to triangulate 2 phrase tables into 1 table
 by combining source-pivot and pivot-target for common pivot phrase'''
 
+# Standarde libraries
 import argparse
-#import codecs
 import math
-#import multiprocessing
-#import os
 import sys
-#import time
-#from subprocess import call, Popen, PIPE
-
-#from collections import defaultdict
-
-# my exp libs
-#from exp.common import cache, debug, files, progress
-#from exp.phrasetable import findutil
-#from exp.phrasetable import lex, combine_lex
-#from exp.phrasetable.reverse import reverseTable
 
 # Local libraries
-import nlputils.init
 from nlputils.common import compat
 from nlputils.common import files
 from nlputils.common import logging
@@ -43,22 +30,22 @@ MINPROB = 10 ** -10
 NBEST = 20
 
 # methods to estimate trans probs (countmin/prodprob/bidirmin/bidirgmean/bidirmax/bidiravr)
-methods = ['countmin', 'prodprob', 'bidirmin', 'bidirgmean', 'bidirmax', 'bidiravr']
+method_list = ['countmin', 'prodprob', 'bidirmin', 'bidirgmean', 'bidirmax', 'bidiravr']
 #METHOD = 'counts'
 #METHOD = 'hybrid'
 #METHOD = 'countmin'
 METHOD = 'prodprob'
 
 # methods to estimate lexical weight
-lexMethods = ['prodweight', 'countmin', 'prodprob', 'bidirmin', 'bidirgmean', 'bidirmax', 'bidiravr', 'table', 'countmin+table', 'prodprob+table', 'bidirmin+table', 'bidirgmean+table']
+lex_method_list = ['prodweight', 'countmin', 'prodprob', 'bidirmin', 'bidirgmean', 'bidirmax', 'bidiravr', 'table', 'countmin+table', 'prodprob+table', 'bidirmin+table', 'bidirgmean+table']
 LEX_METHOD = 'prodweight'
 
 # methods to estimate joint trans probs
-jointMethods = ['memoryless', 'independent']
+joint_method_list = ['memoryless', 'independent']
 JOINT_METHOD = 'memoryless'
 
 # matching methods
-matchMethods = ['hiero', 'symbols', 'treecomp', 'treedist', 'treedistexp']
+match_method_list = ['hiero', 'symbols', 'treecomp', 'treedist', 'treedistexp']
 MATCH_METHOD = 'symbols'
 
 NULLS = 10**4
@@ -69,13 +56,13 @@ class WorkSet:
     '''data set for multi-processing'''
     def __init__(self, savefile, workdir, method, **options):
         prefix = options.get('prefix', 'phrase')
-        self.multiTarget = options.get('multiTarget', False)
+        self.multi_target = options.get('multi_target', False)
         self.Record = options.get('RecordClass', MosesRecord)
         self.method = method
         self.matchMethod = options.get('matchMethod', MATCH_METHOD)
         self.jointMethod = options.get('jointMethod', JOINT_METHOD)
 #        if method.find('multi') >= 0:
-#            self.multiTarget = True
+#            self.multi_target = True
 #            self.method = method.replace('multi','').replace('+','')
         self.nbest = NBEST
         self.savePath = savefile
@@ -125,8 +112,8 @@ class WorkSet:
 #        self.recordProc.terminate()
 
 
-#def updateFeatures(recPivot, recPair, method, multiTarget = False, jointMethod = 'memoryless'):
-def updateFeatures(recPivot, recPair, workset, multiTarget = False):
+#def updateFeatures(recPivot, recPair, method, multi_target = False, jointMethod = 'memoryless'):
+def updateFeatures(recPivot, recPair, workset, multi_target = False):
     '''update features'''
     features = recPivot.features
     srcFeatures = recPair[0].features
@@ -137,7 +124,7 @@ def updateFeatures(recPivot, recPair, workset, multiTarget = False):
     #if method.find('prodprob') >= 0:
     if workset.method.find('prodprob') >= 0:
         # multiplying scores and marginalizing
-        if not multiTarget:
+        if not multi_target:
             for key in ['egfl', 'egfp', 'fgel', 'fgep']:
                 features.setdefault(key, 0)
                 if workset.matchMethod == 'hiero':
@@ -166,7 +153,7 @@ def updateFeatures(recPivot, recPair, workset, multiTarget = False):
                     features[key] += (rate * srcFeatures[key] * trgFeatures[key])
                 else:
                     assert False, 'Invalid Match Method'
-        if multiTarget:
+        if multi_target:
             # p(trg,pvt|src) ~ p(trg|pvt) * p(pvt|src)
             features['egfp'] =  srcFeatures['egfp'] * trgFeatures['egfp']
             if workset.jointMethod == 'memoryless':
@@ -191,7 +178,7 @@ def updateFeatures(recPivot, recPair, workset, multiTarget = False):
     # using 'p' and 'w' of target
     if 'p' in trgFeatures:
         features['p'] = trgFeatures['p']
-    if multiTarget:
+    if multi_target:
         if 'w' in trgFeatures:
             features['0w'] = trgFeatures['w']
         if 'w' in srcFeatures:
@@ -298,16 +285,16 @@ def calcPhraseTransProbsByCounts(records):
             rec.features['egfp'] == 0
 
 
-def calcPhraseTransProbsOnTable(tablePath, savePath, **options):
+def calcPhraseTransProbsOnTable(table_path, savePath, **options):
     '''calculate phrase trans probs on the table in which co-occurrence counts are estimated'''
     method = options.get('method', METHOD)
     RecordClass = options.get('RecordClass', MosesRecord)
 
-    tableFile = files.open(tablePath, "r")
+    table_file = files.open(table_path, "r")
     saveFile  = files.open(savePath, "w")
     records = {}
     lastSrc = ''
-    for line in tableFile:
+    for line in table_file:
         rec = RecordClass(line)
         key = "%s ||| %s |||" % (rec.src, rec.trg)
         if rec.src != lastSrc and records:
@@ -321,7 +308,7 @@ def calcPhraseTransProbsOnTable(tablePath, savePath, **options):
         calcPhraseTransProbsByCounts(records)
         writeRecords(saveFile, records)
     saveFile.close()
-    tableFile.close()
+    table_file.close()
 
 
 def calcSrcCount(records):
@@ -334,13 +321,13 @@ def calcSrcCount(records):
 def updateWordPairCounts(lexCounts, records):
     '''find word pairs in phrase pairs, and update the counts of word pairs'''
     if len(records) > 0:
-        srcSymbols = records.values()[0].srcSymbols
-        if len(srcSymbols) == 1:
+        src_symbols = records.values()[0].src_symbols
+        if len(src_symbols) == 1:
            for rec in records.values():
                trgSymbols = rec.trgSymbols
                if len(trgSymbols) == 1:
-                   lexCounts.addPair(srcSymbols[0], trgSymbols[0], rec.counts.co)
-        lexCounts.filterNBestBySrc(srcWord = srcSymbols[0])
+                   lexCounts.addPair(src_symbols[0], trgSymbols[0], rec.counts.co)
+        lexCounts.filterNBestBySrc(srcWord = src_symbols[0])
 
 def flattenRecords(records, sort = False):
     '''if records are type of dict, return them as a list'''
@@ -372,7 +359,7 @@ def pivotRecPairs(rows, workset):
 
     if len(rows) > 0:
         records = {}
-        if workset.multiTarget:
+        if workset.multi_target:
             multiRecords = {}
             #jointMethod = workset.jointMethod
         for recPair in rows:
@@ -381,10 +368,10 @@ def pivotRecPairs(rows, workset):
                 if recPair[0].trg != recPair[1].src:
                     continue
             elif workset.matchMethod == 'symbols':
-                if recPair[0].trgSymbols != recPair[1].srcSymbols:
+                if recPair[0].trgSymbols != recPair[1].src_symbols:
                     continue
             trgKey = recPair[1].trg + ' |||'
-            if workset.multiTarget:
+            if workset.multi_target:
                 #strMultiTrg = intern(recPair[1].trg + ' |COL| ' + recPair[0].trg)
                 strMultiTrg = recPair[1].trg + ' |COL| ' + recPair[0].trg
                 multiKey = strMultiTrg + ' |||'
@@ -395,7 +382,7 @@ def pivotRecPairs(rows, workset):
                 recPivot.trg = recPair[1].trg
                 records[trgKey] = recPivot
             recPivot = records[trgKey]
-            if workset.multiTarget:
+            if workset.multi_target:
                 recMulti = workset.Record()
                 recMulti.src = recPair[0].src
                 recMulti.trg = strMultiTrg
@@ -408,13 +395,13 @@ def pivotRecPairs(rows, workset):
             #updateCounts(recPivot, recPair, workset)
             # merging the word alignments
             mergeAligns(recPivot, recPair)
-            if workset.multiTarget:
-                #updateFeatures(recMulti, recPair, workset.method, multiTarget = True, jointMethod = jointMethod)
-                updateFeatures(recMulti, recPair, workset, multiTarget = True)
+            if workset.multi_target:
+                #updateFeatures(recMulti, recPair, workset.method, multi_target = True, jointMethod = jointMethod)
+                updateFeatures(recMulti, recPair, workset, multi_target = True)
                 updateCounts(recMulti, recPair, workset.method)
                 mergeAligns(recMulti, recPair)
         # at this time, all the source-target records are determined for given source
-        if workset.multiTarget:
+        if workset.multi_target:
             # copying the estimated features of source-target records to source-target-pivot records
             for multiKey, recMulti in multiRecords.items():
                 trgPair = recMulti.trg.split(' |COL| ')
@@ -463,7 +450,7 @@ def pivotRecPairs(rows, workset):
                 for _, key in scores[:workset.nbest]:
                     bestRecords[key] = records[key]
                 records = bestRecords
-            if workset.multiTarget:
+            if workset.multi_target:
                 if len(multiRecords) > workset.nbest:
                     # T1-filtering method
                     bestTrgRecords = {}
@@ -498,7 +485,7 @@ def pivotRecPairs(rows, workset):
                             else:
                                 bestMultiRecords[multiKey] = multiRecords[multiKey]
                     multiRecords = bestMultiRecords
-        if workset.multiTarget:
+        if workset.multi_target:
             records = multiRecords
         # putting the records into outQueue, and other process will write them in table file
         if records:
@@ -519,6 +506,7 @@ def writeRecords(fileObj, records):
   for rec in flattenRecords(records, sort = True):
       if rec.counts.co > 0:
           fileObj.write( rec.to_str() )
+          fileObj.write("\n")
 
 
 def writeRecord(rec, workset):
@@ -526,6 +514,7 @@ def writeRecord(rec, workset):
     if rec:
         if rec.counts.cooc > 0:
             workset.foutPivot.write( rec.to_str() )
+            workset.foutPivot.write( "\n" )
             workset.foutPivot.flush()
             workset.numRecSrcTrg += 1
             workset.setPhrasesSrcTrg.add(rec.src)
@@ -575,10 +564,10 @@ def calcLexWeight(rec, lexCounts, reverse = False):
         lexWeight *= max(trgProb, minProb)
     return lexWeight
 
-def calcLexWeights(tablePath, lexCounts, savePath, RecordClass = MosesRecord):
-    tableFile = files.open(tablePath, 'r')
+def calcLexWeights(table_path, lexCounts, savePath, RecordClass = MosesRecord):
+    table_file = files.open(table_path, 'r')
     saveFile  = files.open(savePath, 'w')
-    for line in tableFile:
+    for line in table_file:
         rec = RecordClass(line)
         if rec.trg.find('|COL|') < 0:
             rec.features['egfl'] = calcLexWeight(rec, lexCounts, reverse = False)
@@ -589,7 +578,7 @@ def calcLexWeights(tablePath, lexCounts, savePath, RecordClass = MosesRecord):
             rec.features['0fgel'] = calcLexWeight(rec, lexCounts, reverse = True)
             saveFile.write( rec.to_str() )
     saveFile.close()
-    tableFile.close()
+    table_file.close()
 
 
 def pivot(table1, table2, savefile="phrase-table.gz", workdir=".", **options):
@@ -606,7 +595,7 @@ def pivot(table1, table2, savefile="phrase-table.gz", workdir=".", **options):
         jointMethod = options.get('jointmethod', JOINT_METHOD)
         matchMethod = options.get('matchmethod', MATCH_METHOD)
         numNulls  = options.get('nulls', NULLS)
-        multiTarget = options.get('multitarget', False)
+        multi_target = options.get('multitarget', False)
         logFile = options.get('log', '')
         showProgress = options.get('progress', True)
 
@@ -616,19 +605,19 @@ def pivot(table1, table2, savefile="phrase-table.gz", workdir=".", **options):
                 assert False, "aligned lexfile is not given"
 
         if matchMethod == 'hiero':
-            keyType = 'srcHiero'
+            key_type = 'src_hiero'
         else:
-            keyType = 'srcSymbols'
+            key_type = 'src_symbols'
         logging.log("loading: %s" % table1)
-        #tableSrcPvt = Table(table1, RecordClass, keyType=keyType, showProgress=showProgress)
+        #tableSrcPvt = Table(table1, RecordClass, key_type=key_type, showProgress=showProgress)
         tableSrcPvt = Table(table1, RecordClass, showProgress=showProgress)
         logging.log("loading: %s" % table2)
-        tablePvtTrg = Table(table2, RecordClass, keyType=keyType, showProgress=showProgress)
+        tablePvtTrg = Table(table2, RecordClass, key_type=key_type, showProgress=showProgress)
 
         workOptions = {}
         workOptions['RecordClass'] = RecordClass
         workOptions['prefix'] = prefix
-        workOptions['multiTarget'] = multiTarget
+        workOptions['multi_target'] = multi_target
         workOptions['jointMethod'] = jointMethod
         workOptions['matchMethod'] = matchMethod
         workset = WorkSet(savefile, workdir, method, **workOptions)
@@ -638,7 +627,8 @@ def pivot(table1, table2, savefile="phrase-table.gz", workdir=".", **options):
         rows = []
         lastSrc = ''
         logging.log("beginning pivot\n")
-        for recSrcPvt in progress.view(tableSrcPvt.find(''),maxCount=len(tableSrcPvt)):
+        #for recSrcPvt in progress.view(tableSrcPvt.find(''),maxCount=len(tableSrcPvt)):
+        for recSrcPvt in progress.view(tableSrcPvt.find(''),'processing',max_count=len(tableSrcPvt)):
             src = recSrcPvt.src
             workset.numRecSrcPvt += 1
             workset.setPhrasesSrcPvt.add(recSrcPvt.src)
@@ -649,11 +639,14 @@ def pivot(table1, table2, savefile="phrase-table.gz", workdir=".", **options):
                     pivotRecPairs(rows, workset)
                     rows = []
             #pvtKey = str.join(' ', recSrcPvt.trgSymbols)
-            if keyType == 'srcHiero':
-                pvtKey = str.join(' ', RecordClass.getSymbols(recSrcPvt.trg,hiero=True))
-            elif keyType == 'srcSymbols':
-                pvtKey = str.join(' ', RecordClass.getSymbols(recSrcPvt.trg,hiero=False))
-            for recPvtTrg in tablePvtTrg.find(pvtKey):
+            #if key_type == 'src_hiero':
+            #    pvtKey = str.join(' ', RecordClass.getSymbols(recSrcPvt.trg,hiero=True))
+            #elif key_type == 'src_symbols':
+            #    pvtKey = str.join(' ', RecordClass.getSymbols(recSrcPvt.trg,hiero=False))
+            #logging.log("pvt key: %s" % (pvtKey,))
+            #for recPvtTrg in tablePvtTrg.find(pvtKey):
+            #for recPvtTrg in tablePvtTrg.find_src(pvtKey):
+            for recPvtTrg in tablePvtTrg.find_src(recSrcPvt.trg):
                 workset.numRecPvtTrg += 1
                 workset.setPhrasesPvtTrg.add(recPvtTrg.src)
                 for term in recPvtTrg.srcTerms:
@@ -755,28 +748,6 @@ def pivot(table1, table2, savefile="phrase-table.gz", workdir=".", **options):
         workset.close()
         sys.exit(1)
 
-# for moses
-#def main():
-#    parser = argparse.ArgumentParser(description = 'load 2 phrase tables and pivot into one moses phrase table')
-#    parser.add_argument('table1', help = 'phrase table 1')
-#    parser.add_argument('table2', help = 'phrase table 2')
-#    parser.add_argument('savefile', help = 'path for saving moses phrase table file')
-#    parser.add_argument('--threshold', help = 'threshold for ignoring the phrase translation probability (real number)', type=float, default=THRESHOLD)
-#    parser.add_argument('--nbest', help = 'best n scores for phrase pair filtering (default = 20)', type=int, default=NBEST)
-#    parser.add_argument('--method', help = 'triangulation method', choices=methods, default=METHOD)
-#    parser.add_argument('--lexmethod', help = 'lexical triangulation method', choices=lexMethods, default=LEX_METHOD)
-#    parser.add_argument('--jointmethod', help = 'method to estimate joint trans probs', choices=jointMethods, default=JOINT_METHOD)
-#    parser.add_argument('--workdir', help = 'working directory', default='.')
-#    parser.add_argument('--alignlex', help = 'word pair counts file', default=None)
-#    parser.add_argument('--nulls', help = 'number of NULLs (lines) for table lex', type = int, default=NULLS)
-#    parser.add_argument('--noprefilter', help = 'No pre-filtering', type = bool, default=False)
-#    args = vars(parser.parse_args())
-#
-#    if args['noprefilter']:
-#        NOPREFILTER = args['noprefilter']
-#
-#    pivot(**args)
-
 def main():
     parser = argparse.ArgumentParser(description = 'load 2 rule tables and pivot into one travatar rule table')
     parser.add_argument('table1', help = 'rule table 1')
@@ -784,10 +755,10 @@ def main():
     parser.add_argument('savefile', help = 'path for saving travatar rule table file')
     parser.add_argument('--threshold', help = 'threshold for ignoring the phrase translation probability (real number)', type=float, default=THRESHOLD)
     parser.add_argument('--nbest', help = 'best n scores for rule pair filtering (default = 20)', type=int, default=NBEST)
-    parser.add_argument('--method', help = 'triangulation method', choices=methods, default=METHOD)
-    parser.add_argument('--lexmethod', help = 'lexical triangulation method', choices=lexMethods, default=LEX_METHOD)
-    parser.add_argument('--jointmethod', help = 'method to estimate joint trans probs', choices=jointMethods, default=JOINT_METHOD)
-    parser.add_argument('--matchmethod', help = 'matching method', choices=matchMethods, default=MATCH_METHOD)
+    parser.add_argument('--method', help = 'triangulation method', choices=method_list, default=METHOD)
+    parser.add_argument('--lexmethod', help = 'lexical triangulation method', choices=lex_method_list, default=LEX_METHOD)
+    parser.add_argument('--jointmethod', help = 'method to estimate joint trans probs', choices=joint_method_list, default=JOINT_METHOD)
+    parser.add_argument('--matchmethod', help = 'matching method', choices=match_method_list, default=MATCH_METHOD)
     parser.add_argument('--workdir', help = 'working directory', default='.')
     parser.add_argument('--alignlex', help = 'word pair counts file', default=None)
     parser.add_argument('--nulls', help = 'number of NULLs (lines) for table lex', type = int, default=NULLS)
