@@ -10,6 +10,7 @@ import math
 from common import compat
 #from common.numbers cimport intToBytes
 from nlputils.common import files
+from nlputils.common import logging
 from nlputils.common import numbers
 from nlputils.common import vocab
 
@@ -40,6 +41,11 @@ cdef class CoOccurrence:
 
     cpdef CoOccurrence getReversed(self):
         return CoOccurrence(self.trg, self.src, self.cooc)
+
+    cdef void round(self, digits=6):
+        self.src  = round(self.src, digits)
+        self.trg  = round(self.trg, digits)
+        self.cooc = round(self.cooc, digits)
 
     cpdef void setCounts(self, object src=None, object trg=None, object cooc=None):
         if src:
@@ -85,7 +91,7 @@ cdef class Record(object):
 
     def getSrcSymbols(self):
         return self.getSymbols(self.src)
-    srcSymbols = property(getSrcSymbols)
+    src_symbols = property(getSrcSymbols)
 
     def getSrcTerms(self):
         return self.getTerms(self.src)
@@ -168,7 +174,7 @@ class MosesRecord(Record):
 
 #    def getSrcSymbols(self):
 #        return self.src.split(' ')
-#    srcSymbols = property(getSrcSymbols)
+#    src_symbols = property(getSrcSymbols)
 #
 #    def getSrcTerms(self):
 #        return self.src.split(' ')
@@ -186,9 +192,10 @@ class MosesRecord(Record):
         strFeatures = getStrMosesFeatures(self.features)
 #        strAligns = str.join(' ', self.aligns)
         strAligns = str.join(' ', sorted(self.aligns) )
-        self.counts.simplify(0.0001)
+        self.counts.round()
         strCounts   = "%s %s %s" % (self.counts.trg, self.counts.src, self.counts.cooc)
-        buf = str.join(s, [self.src, self.trg, strFeatures, strAligns, strCounts]) + "\n"
+        #buf = str.join(s, [self.src, self.trg, strFeatures, strAligns, strCounts]) + "\n"
+        buf = str.join(s, [self.src, self.trg, strFeatures, strAligns, strCounts])
 #        buf = str.join(s, [str(self.src), str(self.trg), strFeatures, strAligns, strCounts]) + "\n"
         return buf
 
@@ -265,8 +272,8 @@ cdef class TravatarRecord(Record):
 
 #    cpdef getSrcSymbols(self):
 #      return getTravatarSymbols(self.src)
-#    #srcSymbols = property(getSrcSymbols)
-#    property srcSymbols:
+#    #src_symbols = property(getSrcSymbols)
+#    property src_symbols:
 #        def __get__(self): return self.getSrcSymbols()
 #
 #    cpdef getSrcTerms(self):
@@ -341,19 +348,19 @@ cdef class TravatarRecord(Record):
 
     cpdef syncTags(self):
         self.sync = False
-        srcSymbols = self.src.split(' ')
+        src_symbols = self.src.split(' ')
         trgSymbols = self.trg.split(' ')
-#        if len(srcSymbols) >= 4 and srcSymbols[0][0] != '"':
-        if isTree(srcSymbols):
+#        if len(src_symbols) >= 4 and src_symbols[0][0] != '"':
+        if isTree(src_symbols):
             # src is tree (s-expression)
             if len(trgSymbols) >= 2 and trgSymbols[-2] == "@":
                 # trg is tagged
                 pass
             else:
                 # trg is not tagged
-                srcTag = srcSymbols[0]
+                srcTag = src_symbols[0]
                 srcNonTerminals = []
-                for s in srcSymbols:
+                for s in src_symbols:
                     if s[0:1] == 'x' and s[1:2].isdigit():
                         srcNonTerminals.append(s)
 #                        if len(s) > 3:
@@ -381,9 +388,9 @@ cdef class TravatarRecord(Record):
                 else:
                     trgSymbols.append('X')
                 self.trg = intern(str.join(' ', trgSymbols))
-        if len(srcSymbols) == 3:
-            tag = srcSymbols[2]
-            if srcSymbols[0] == "x0:"+tag:
+        if len(src_symbols) == 3:
+            tag = src_symbols[2]
+            if src_symbols[0] == "x0:"+tag:
                 # src is unary cycle
                 #self.src = ""
                 self.src = ()
@@ -397,14 +404,18 @@ cdef class TravatarRecord(Record):
 #        d['aligns'] = self.aligns
 #        return d
 
-    def to_str(self, s = ' ||| '):
+    cpdef to_str(self, s = ' ||| '):
       strFeatures = getStrTravatarFeatures(self.features)
+      self.counts.round()
       strCounts = ""
       if self.counts.cooc > 0:
-          strCounts = "%s %s %s" % (self.counts.cooc, self.counts.src, self.counts.trg)
+          #self.counts.cooc = round(self.counts.cooc, 6)
+          #strCounts = "%s %s %s" % (self.counts.cooc, self.counts.src, self.counts.trg)
+          strCounts = "%s %s %s" % (round(self.counts.cooc,6), round(self.counts.src,6), round(self.counts.trg,6))
   #    strAligns = str.join(' ', self.aligns)
       strAligns = str.join(' ', sorted(self.aligns))
-      buf = str.join(s, [self.src, self.trg, strFeatures, strCounts, strAligns]) + "\n"
+      #buf = str.join(s, [self.src, self.trg, strFeatures, strCounts, strAligns]) + "\n"
+      buf = str.join(s, [self.src, self.trg, strFeatures, strCounts, strAligns])
       return buf
 
     @staticmethod
@@ -486,15 +497,18 @@ def getFlattenSymbols(symbols, grammar = 'scfg'):
         symbols = newSymbols
     return symbols
 
-def getStrTravatarFeatures(dicFeatures):
+cpdef str getStrTravatarFeatures(dict dict_features):
     '''convert features dict into string in format of 'key=val' list'''
-    featureList = []
-    for key, val in dicFeatures.items():
+    cdef list featureList = []
+    cdef str key
+    cdef object val
+    for key, val in dict_features.items():
         if key.find('egf') >= 0 or key.find('fge') >= 0:
             try:
-                val = math.log(val)
+                #val = math.log(val)
+                val = round(math.log(val), 6)
             except:
-                print(key, val)
+                logging.warn( (key,val) )
         featureList.append( "%s=%s" % (key, val) )
     return str.join(' ', sorted(featureList))
 
@@ -520,17 +534,17 @@ def isTree(symbols):
     else:
         return False
 
-def syncTags(srcSymbols, trgSymbols, sync):
-    if isTree(srcSymbols):
+def syncTags(src_symbols, trgSymbols, sync):
+    if isTree(src_symbols):
         # src is tree (s-expression)
         if len(trgSymbols) >= 2 and trgSymbols[-2] == "@":
             # trg is tagged
             pass
         else:
             # trg is not tagged
-            srcTag = srcSymbols[0]
+            srcTag = src_symbols[0]
             srcNonTerminals = []
-            for s in srcSymbols:
+            for s in src_symbols:
                 if s[0:1] == 'x' and s[1:2].isdigit():
                     srcNonTerminals.append(s)
 #                        if len(s) > 3:
@@ -558,11 +572,11 @@ def syncTags(srcSymbols, trgSymbols, sync):
             elif sync == 'hiero':
                 trgSymbols.append('X')
 #            self.trg = intern(str.join(' ', trgSymbols))
-#    if len(srcSymbols) == 3:
-#        tag = srcSymbols[2]
-#        if srcSymbols[0] == "x0:"+tag:
+#    if len(src_symbols) == 3:
+#        tag = src_symbols[2]
+#        if src_symbols[0] == "x0:"+tag:
 #            # src is unary cycle
 #            self.src = ""
 #    print(trgSymbols)
-    return srcSymbols, trgSymbols
+    return src_symbols, trgSymbols
 
