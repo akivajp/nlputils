@@ -14,7 +14,7 @@ import sys
 import subprocess
 # Local libraries
 from nlputils.common import files
-from nlputils.common.progress import view
+from nlputils.common import progress
 from nlputils.smt.trans_models import records
 
 def matchRules(rec, rules):
@@ -43,19 +43,22 @@ def saveRecords(saveFile, records, nbest):
             newRecords.append( records[i] )
         records = newRecords
     for rec in records:
-        saveFile.write( rec.to_str() )
+        saveFile.write(rec.to_str())
+        saveFile.write("\n")
 
-def filterTable(srcFile, saveFile, rules, nbest, progress = False, RecordClass = records.MosesRecord):
-    if type(srcFile) == str:
-        #srcFile = files.open(srcFile)
-        srcFile = files.open(srcFile, 'rt')
+#def filterTable(srcFile, saveFile, rules, nbest, progress = False, RecordClass = records.MosesRecord):
+def filterTable(srcFile, saveFile, rules, nbest, RecordClass = records.MosesRecord):
+    #if type(srcFile) == str:
+    #    #srcFile = files.open(srcFile)
+    #    srcFile = files.open(srcFile, 'rt')
     if type(saveFile) == str:
         saveFile = files.open(saveFile, 'wt')
-    if progress:
-        srcFile = view(srcFile)
+    #if progress:
+    #    srcFile = progress.view(srcFile)
+    #srcFile = progress.view(srcFile, 'processing')
     records = []
     lastSrc = ''
-    for line in srcFile:
+    for line in progress.view(srcFile, 'processing'):
         rec = RecordClass(line)
         if rec.src != lastSrc:
             lastSrc = rec.src
@@ -69,8 +72,10 @@ def filterTable(srcFile, saveFile, rules, nbest, progress = False, RecordClass =
         saveRecords(saveFile, records, nbest)
     saveFile.close()
 
-def filterMosesTable(srcFile, saveFile, rules, nbest, progress = False):
-    filterTable(srcFile, saveFile, rules, nbest, progress = progress, RecordClass = records.MosesRecord)
+#def filterMosesTable(srcFile, saveFile, rules, nbest, progress = False):
+def filterMosesTable(srcFile, saveFile, rules, nbest):
+    #filterTable(srcFile, saveFile, rules, nbest, progress = progress, RecordClass = records.MosesRecord)
+    filterTable(srcFile, saveFile, rules, nbest, RecordClass = records.MosesRecord)
 
 #def main():
 #    epilog = '''
@@ -99,7 +104,8 @@ def filterMosesTable(srcFile, saveFile, rules, nbest, progress = False):
 #    filterMosesTable(**args)
 
 def filterTravatarTable(srcFile, saveFile, rules, nbest, progress = False):
-    filterTable(srcFile, saveFile, rules, nbest, progress = progress, RecordClass = records.TravatarRecord)
+    #filterTable(srcFile, saveFile, rules, nbest, progress = progress, RecordClass = records.TravatarRecord)
+    filterTable(srcFile, saveFile, rules, nbest, RecordClass = records.TravatarRecord)
 
 def main():
     epilog = '''
