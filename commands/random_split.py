@@ -55,7 +55,7 @@ def random_split(conf, **others):
     indices = get_valid_indices(conf)
     if verbose:
         logging.debug(len(indices))
-    if conf.data.seed:
+    if conf.data.seed >= 0:
         random.seed(conf.data.seed)
     if verbose:
         logging.log("Randomizing sequence")
@@ -104,7 +104,7 @@ def check_config(conf):
     numTags  = len(conf.data.tags)
     conf.data.inpaths = conf.data.input
     conf.data.seed        = conf.data.random_seed
-    conf.data.split_sizes  = conf.data.split_sizes
+    conf.data.split_sizes = conf.data.split_sizes
     if not conf.data.prefixes:
         conf.data.prefixes = [''] * numInput
     elif len(conf.data.prefixes) != numInput:
@@ -147,7 +147,7 @@ def main():
     parser.add_argument('--ignore-empty', '-E', help='preventing empty lines to output', action='store_true')
     parser.add_argument('--quiet', '-q', help='not showing staging log', action='store_true')
     parser.add_argument('--verbose', '-v', help='verbose mode (including debug info)', action='store_true')
-    parser.add_argument('--random-seed', '-R', help='random seed', type=int)
+    parser.add_argument('--random-seed', '-R', help='random seed', default=-1, type=int)
     parser.add_argument('--ids', metavar='SUFFIX', help='write original line numbers for each tags', nargs='?', const='ids')
     args = parser.parse_args()
     logging.log('test')
