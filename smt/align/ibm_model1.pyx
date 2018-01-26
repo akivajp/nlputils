@@ -33,6 +33,9 @@ cdef class Vocab:
 
     def __cinit__(self):
         self.init()
+    cdef void init(self):
+        self.src = StringEnumerator()
+        self.trg = StringEnumerator()
 
     cpdef tuple ids_pair_to_str_pair(self, src_ids, trg_ids):
         cdef src_str = str.join(' ', [self.src.id2str(i) for i in src_ids[:-1]])
@@ -79,11 +82,14 @@ cdef class Model:
 
     def __cinit__(self):
         self.init()
+    cdef inline void init(self):
+        self.vocab = Vocab()
 
     cpdef double calc_pair_entropy(self, list src_sent, list trg_sent):
         cdef np.ndarray trans_matrix
         trans_matrix = sub_matrix(self.trans_dist, src_sent, trg_sent)
-        return -np.log(trans_matrix.sum(axis=0) / len(src_sent)).sum()
+        #return -np.log(trans_matrix.sum(axis=0) / len(src_sent)).sum()
+        return (-np.log(trans_matrix.sum(axis=0) / len(src_sent)).sum()) / len(trg_sent)
 
     cpdef double calc_entropy(self, list sent_pairs):
         cdef float total_entropy = 0
@@ -133,6 +139,8 @@ cdef class Trainer:
         if conf.has(['src_path', 'trg_path']):
             self.src_path = conf.data.src_path
             self.trg_path = conf.data.trg_path
+    cdef void init(self):
+        self.model = Model()
 
     cpdef np.ndarray calc_uniform_dist(self):
         cdef StringEnumerator vocab_src = self.model.vocab.src
@@ -228,8 +236,10 @@ def train_ibm_model1(conf, **others):
         check_config(conf)
         trainer = Trainer(conf, **others)
         try:
-            np.seterr(all='raise')
-            trainer.train(conf.data.iteration_limit)
+            #np.seterr(all='raise')
+            #trainer.train(conf.data.iteration_limit)
+            with np.errstate(all='raise'):
+                trainer.train(conf.data.iteration_limit)
         except KeyboardInterrupt as k:
             logging.debug(k)
             logging.log("forcing to dump alignments and scores")
