@@ -81,13 +81,18 @@ def cleanParallel(**args):
     outTag = args.get('outTag')
     minLength = args.get('min')
     maxLength = args.get('max')
+    out_dir    = args.get('target_directory')
+
+    if not os.path.isdir(out_dir):
+        logging.log("Making directory: %s" % out_dir)
+        os.makedirs(out_dir)
 
     #print(args)
     srcBaseNames = list( map(os.path.basename, srcFilePaths) )
     commonPrefix = reduce(getLongestCommonPrefix, srcBaseNames)
     commonSuffix = reduce(getLongestCommonSuffix, srcBaseNames)
-    #print(commonPrefix)
-    #print(commonSuffix)
+    logging.debug(commonPrefix)
+    logging.debug(commonSuffix)
     outPaths = []
     for path in srcFilePaths:
         if outTag[0:1] != '.':
@@ -95,10 +100,13 @@ def cleanParallel(**args):
         if commonSuffix:
             outPath = path + outTag
         else:
-            diff = getDiff(path, commonPrefix, commonSuffix)
+            #diff = getDiff(path, commonPrefix, commonSuffix)
+            diff = getDiff(os.path.basename(path), commonPrefix, commonSuffix)
             #print(diff)
+            logging.debug(diff)
             outPath = commonPrefix + outTag + diff
-        outPaths.append(outPath)
+        #outPaths.append(outPath)
+        outPaths.append(os.path.join(out_dir, outPath))
     logging.log("Writing cleaned corpora into: %s" % str.join(' ',outPaths))
     if sys.version_info.major >= 3:
         infiles  = [open(path,'rb') for path in srcFilePaths]
@@ -130,6 +138,7 @@ def main(args):
     parser.add_argument('--min', default=DEFAULT_MIN_LENGTH, type=int, help='minimum #words per line (default: %(default)s)')
     parser.add_argument('--max', default=DEFAULT_MAX_LENGTH, type=int, help='maximum #words per line (default: %(default)s)')
     parser.add_argument('--ratio', default=DEFAULT_RATIO, type=float, help='upper bound of maximal ratio of #words between each 2 lines (default: %(default)s)')
+    parser.add_argument('--target-directory', '-D', default='./', type=str, help='directory to save the cleaned texts (default: %(default)s)')
     parsed = parser.parse_args(args)
     cleanParallel(**vars(parsed))
 
